@@ -1,0 +1,764 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - About Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    About page providing information about the UniteUs ETL application,
+    its features, and system information.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>
+                <i class="fas fa-info-circle me-2"></i>About Calaveras UniteUs ETL
+            </h1>
+            <a href="/" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Overview Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">
+                    <i class="fas fa-project-diagram me-2 text-primary"></i>Project Overview
+                </h4>
+                <p class="lead">
+                    A comprehensive ETL (Extract, Transform, Load) system for processing and analyzing UniteUs data 
+                    for Calaveras County Health and Human Services Agency.
+                </p>
+                <p>
+                    This application automates the ingestion, cleaning, validation, and storage of healthcare referral data, 
+                    providing powerful analytics and reporting capabilities to support data-driven decision making. The system 
+                    features a user-friendly GUI launcher, automated SFTP file imports, real-time ETL job monitoring, and 
+                    comprehensive reporting with 25+ interactive charts and visualizations.
+                </p>
+                <div class="alert alert-info mt-3" role="alert">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <strong>Security:</strong> Features Windows Active Directory authentication with local database fallback, 
+                    role-based access control, comprehensive audit logging, SIEM integration, and optional SSL/TLS encryption 
+                    with support for both self-signed and enterprise certificates from Calaveras County's internal CA.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technology Stack -->
+<div class="row mb-4">
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-server me-2"></i>Backend Technologies
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <strong>Python 3.10+</strong>
+                        <span class="badge bg-info float-end">Language</span>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>FastAPI 0.104+</strong>
+                        <span class="badge bg-success float-end">Web Framework</span>
+                        <div class="text-muted small">Modern async Python web framework with automatic API docs</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Uvicorn 0.24+</strong>
+                        <span class="badge bg-success float-end">ASGI Server</span>
+                        <div class="text-muted small">Lightning-fast ASGI server with SSL/TLS support (self-signed or enterprise certificates)</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Tkinter</strong>
+                        <span class="badge bg-info float-end">GUI</span>
+                        <div class="text-muted small">Built-in GUI launcher with server control window and configuration management</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Multi-Database Support</strong>
+                        <span class="badge bg-warning float-end">Database</span>
+                        <div class="text-muted small">SQLite (default), MS SQL Server, Azure SQL, PostgreSQL, MySQL with connection pooling</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Pandas 2.0+</strong>
+                        <span class="badge bg-secondary float-end">Data Processing</span>
+                        <div class="text-muted small">High-performance data manipulation and analysis</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>LDAP3 2.9+</strong>
+                        <span class="badge bg-secondary float-end">Authentication</span>
+                        <div class="text-muted small">Active Directory (Windows) integration with hybrid local database fallback</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Paramiko 3.4+</strong>
+                        <span class="badge bg-info float-end">SFTP</span>
+                        <div class="text-muted small">Secure file transfer protocol for automated data imports</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>SIEM Integration</strong>
+                        <span class="badge bg-danger float-end">Logging</span>
+                        <div class="text-muted small">JSON structured logging, Windows Event Log, and syslog forwarding</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-3">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-desktop me-2"></i>Frontend Technologies
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <strong>Bootstrap 5.3.0</strong>
+                        <span class="badge bg-primary float-end">UI Framework</span>
+                        <div class="text-muted small">Responsive design and component library</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Chart.js 4.4.0</strong>
+                        <span class="badge bg-info float-end">Visualization</span>
+                        <div class="text-muted small">25+ interactive charts for data analysis with ChartDataLabels plugin</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Plotly.js 2.27.0</strong>
+                        <span class="badge bg-info float-end">Advanced Viz</span>
+                        <div class="text-muted small">Sankey diagrams for referral flow analysis and network visualization</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Document Export</strong>
+                        <span class="badge bg-warning float-end">Export</span>
+                        <div class="text-muted small">Word (.docx) and PDF export with embedded chart images for annual reports</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Font Awesome 6.4.0</strong>
+                        <span class="badge bg-secondary float-end">Icons</span>
+                        <div class="text-muted small">Professional icon library</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Vanilla JavaScript</strong>
+                        <span class="badge bg-warning float-end">Language</span>
+                        <div class="text-muted small">Modern ES6+ with async/await patterns</div>
+                    </li>
+                    <li class="list-group-item">
+                        <strong>AJAX/Fetch API</strong>
+                        <span class="badge bg-secondary float-end">Data Loading</span>
+                        <div class="text-muted small">Smooth updates without page reloads</div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Architecture Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-sitemap me-2"></i>System Architecture
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Layered Architecture</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-layer-group text-primary me-2"></i><strong>Presentation Layer:</strong> FastAPI routes with Jinja2 templates</li>
+                            <li><i class="fas fa-layer-group text-success me-2"></i><strong>Business Logic:</strong> Service classes for ETL, reports, and data access</li>
+                            <li><i class="fas fa-layer-group text-info me-2"></i><strong>Data Layer:</strong> Repository pattern with connection pooling</li>
+                            <li><i class="fas fa-layer-group text-warning me-2"></i><strong>Database:</strong> SQLite with optimized indexes and constraints</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Key Features</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-check-circle text-success me-2"></i>GUI launcher with server control window (start/stop/restart)</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Real-time ETL job monitoring with progress tracking</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>25+ interactive analytics charts and visualizations</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Advanced filtering, search, and export capabilities (Word/PDF)</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Windows Active Directory authentication with local database fallback</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Role-based access control (Admin/Operator/Viewer/New User)</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Comprehensive audit logging and SIEM integration</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>SFTP integration for automated file imports</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Multi-database support (SQLite, MS SQL, Azure SQL, PostgreSQL, MySQL)</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Schema validation and automatic error detection</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>HTTPS with self-signed or enterprise certificate support</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Network deployment with automatic browser launch</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Cleaning Steps -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-broom me-2"></i>Data Cleaning & Validation Process
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Our ETL pipeline implements a comprehensive data cleaning and validation process to ensure data quality and integrity:
+                </p>
+                
+                <div class="accordion" id="dataCleaningAccordion">
+                    <!-- Step 1 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#step1">
+                                <span class="badge bg-primary me-2">1</span>
+                                <strong>File Discovery & Validation</strong>
+                            </button>
+                        </h2>
+                        <div id="step1" class="accordion-collapse collapse show" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Scan input directories for data files</li>
+                                    <li>Validate file formats and extensions (.txt, .csv, .tsv)</li>
+                                    <li>Check file permissions and accessibility</li>
+                                    <li>Detect encoding (UTF-8, Latin-1, etc.)</li>
+                                    <li>Log file metadata (size, modification date, record count)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step2">
+                                <span class="badge bg-primary me-2">2</span>
+                                <strong>Schema Detection & Parsing</strong>
+                            </button>
+                        </h2>
+                        <div id="step2" class="accordion-collapse collapse" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Auto-detect delimiters (pipe |, comma, tab, semicolon)</li>
+                                    <li>Identify header rows and column names</li>
+                                    <li>Detect data types (text, numeric, date, boolean)</li>
+                                    <li>Handle multi-line fields and quoted values</li>
+                                    <li>Parse nested structures (JSON fields within columns)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step3">
+                                <span class="badge bg-primary me-2">3</span>
+                                <strong>Data Type Normalization</strong>
+                            </button>
+                        </h2>
+                        <div id="step3" class="accordion-collapse collapse" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li><strong>Dates:</strong> Convert to ISO 8601 format (YYYY-MM-DD HH:MM:SS)</li>
+                                    <li><strong>Numbers:</strong> Remove currency symbols and formatting</li>
+                                    <li><strong>Text:</strong> Trim whitespace, fix encoding issues (smart quotes, etc.)</li>
+                                    <li><strong>Booleans:</strong> Standardize Yes/No, True/False, 1/0 variants</li>
+                                    <li><strong>Missing Values:</strong> Normalize NULL, N/A, empty string variants to SQL NULL</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step4">
+                                <span class="badge bg-primary me-2">4</span>
+                                <strong>Missing Data Handling</strong>
+                            </button>
+                        </h2>
+                        <div id="step4" class="accordion-collapse collapse" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Identify null, empty, and placeholder values ("N/A", "NULL", "-", etc.)</li>
+                                    <li>Standardize to SQL NULL for database consistency</li>
+                                    <li>Track missing data percentages by column</li>
+                                    <li>Flag records with critical missing fields</li>
+                                    <li>Generate data completeness reports</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step5">
+                                <span class="badge bg-primary me-2">5</span>
+                                <strong>Duplicate Detection & Removal</strong>
+                            </button>
+                        </h2>
+                        <div id="step5" class="accordion-collapse collapse" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Identify duplicate records using primary keys</li>
+                                    <li>Use UPSERT operations (INSERT or UPDATE) based on primary keys</li>
+                                    <li>Track inserted, updated, and skipped records</li>
+                                    <li>Prevent duplicate data accumulation across multiple ETL runs</li>
+                                    <li>Log deduplication statistics for audit trail</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 6 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step6">
+                                <span class="badge bg-primary me-2">6</span>
+                                <strong>Data Validation & Business Rules</strong>
+                            </button>
+                        </h2>
+                        <div id="step6" class="accordion-collapse collapse" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Validate data types and format consistency</li>
+                                    <li>Check date logic (start_date ≤ end_date, dates not in future)</li>
+                                    <li>Verify required fields are present</li>
+                                    <li>Validate enumerated values match allowed lists</li>
+                                    <li>Track data quality issues in dedicated quality log</li>
+                                    <li>Flag records failing validation for review</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 7 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step7">
+                                <span class="badge bg-primary me-2">7</span>
+                                <strong>Data Enrichment & Transformation</strong>
+                            </button>
+                        </h2>
+                        <div id="step7" class="accordion-collapse collapse" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Maintain data lineage (track source files and processing dates)</li>
+                                    <li>Log ETL metadata (file hash, processing time, record counts)</li>
+                                    <li>Generate composite keys for cross-table relationships</li>
+                                    <li>Add audit trail for data modifications</li>
+                                    <li>Store processing statistics for monitoring and reporting</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 8 -->
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#step8">
+                                <span class="badge bg-primary me-2">8</span>
+                                <strong>Database Loading & Indexing</strong>
+                            </button>
+                        </h2>
+                        <div id="step8" class="accordion-collapse collapse" data-bs-parent="#dataCleaningAccordion">
+                            <div class="accordion-body">
+                                <ul>
+                                    <li>Use batch UPSERT operations for optimal performance</li>
+                                    <li>Create indexes on frequently queried columns</li>
+                                    <li>Maintain ETL metadata for tracking and audit</li>
+                                    <li>Generate processing statistics and data quality reports</li>
+                                    <li>Log all operations to comprehensive audit trail</li>
+                                    <li>Update dashboard metrics in real-time</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Directory Authentication -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>Active Directory Authentication Implementation
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    This system implements a custom Active Directory authentication solution specifically configured for Calaveras County's network environment. The implementation provides seamless Windows domain integration while maintaining local user management and role assignment.
+                </p>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-server me-2"></i>AD Configuration
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <strong>Domain Controller:</strong> 
+                                <code class="text-primary">ldap://CCGDC2</code>
+                            </li>
+                            <li class="mb-2">
+                                <strong>Domain:</strong> 
+                                <code class="text-primary">ORION</code>
+                            </li>
+                            <li class="mb-2">
+                                <strong>Search Base:</strong> 
+                                <code class="text-primary">DC=calco,DC=local</code>
+                            </li>
+                            <li class="mb-2">
+                                <strong>Protocol:</strong> LDAP with SIMPLE authentication
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-user-check me-2"></i>Username Format Support
+                        </h6>
+                        <p class="small text-muted mb-2">The system automatically tries multiple username formats for maximum compatibility:</p>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>UPN Format:</strong> <code>username@orion.local</code>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>NTLM Format:</strong> <code>ORION\username</code>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Plain Username:</strong> <code>username</code>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mb-3" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>Authentication Flow
+                    </h6>
+                    
+                    <div class="alert alert-light mb-3" style="border-left: 4px solid #0d6efd;">
+                        <h6 class="mb-2"><i class="fas fa-cog me-2"></i>How It Works:</h6>
+                        <p class="mb-2 small">
+                            The Python backend application runs as a <strong>Windows service under a domain-joined service account</strong> on the server. 
+                            This service account has <strong>read-only LDAP query permissions</strong> to the Active Directory domain controller (CCGDC2).
+                        </p>
+                        <p class="mb-2 small">
+                            When a user attempts to log in, the backend <strong>uses the Python <code>ldap3</code> library</strong> to:
+                        </p>
+                        <ol class="mb-2 small">
+                            <li>Establish an LDAP connection to the domain controller</li>
+                            <li>Attempt to <strong>bind (authenticate) the user's credentials</strong> against AD</li>
+                            <li>If successful, query AD for the user's profile information (name, email, department, group memberships)</li>
+                        </ol>
+                        <p class="mb-0 small">
+                            <strong>Important:</strong> The service account itself does <strong>not</strong> authenticate users—it only facilitates the LDAP connection. 
+                            Each user's credentials are validated directly against Active Directory using their own username and password via LDAP bind operations.
+                        </p>
+                    </div>
+                    
+                    <h6 class="mb-2"><i class="fas fa-list-ol me-2"></i>Detailed Authentication Steps:</h6>
+                    <ol class="mb-0 small">
+                        <li class="mb-2">
+                            <strong>Pre-Validation:</strong> System checks if user exists in local database and validates account status (active/inactive, auth method)
+                        </li>
+                        <li class="mb-2">
+                            <strong>AD Authentication:</strong> Backend establishes LDAP connection and attempts to bind with the user's credentials using multiple username formats (UPN, NTLM, plain) until successful or all formats exhausted
+                        </li>
+                        <li class="mb-2">
+                            <strong>Directory Search:</strong> Once authenticated, queries AD for user details (display name, email, title, department, group membership)
+                        </li>
+                        <li class="mb-2">
+                            <strong>Auto-Creation:</strong> If user doesn't exist locally, automatically creates account with <code>NEW_USER</code> role and <code>ad</code> auth method
+                        </li>
+                        <li class="mb-2">
+                            <strong>Role Assignment:</strong> User roles are managed in the local database (not auto-assigned from AD groups). Admins can manually assign roles after first login.
+                        </li>
+                        <li class="mb-2">
+                            <strong>Session Creation:</strong> Creates secure session with role-based permissions and audit logging
+                        </li>
+                    </ol>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-users-cog me-2"></i>AD Group Mapping (Informational)
+                        </h6>
+                        <p class="small text-muted mb-2">
+                            The system recognizes the following AD groups for logging purposes, but role assignment is managed separately in the local database:
+                        </p>
+                        <ul class="list-unstyled small">
+                            <li class="mb-1">
+                                <strong>Admin Groups:</strong> Domain Admins, ETL-Admins, IT-Admin, Administrators
+                            </li>
+                            <li class="mb-1">
+                                <strong>Operator Groups:</strong> ETL-Operators, Data-Analysts, Power Users
+                            </li>
+                            <li class="mb-1">
+                                <strong>Note:</strong> Group membership is logged but does not automatically assign roles. Administrators must manually assign roles in the user management interface.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-lock me-2"></i>Security Features
+                        </h6>
+                        <ul class="list-unstyled small">
+                            <li class="mb-2">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <strong>IP Restrictions:</strong> Only allows connections from internal network ranges (192.168.x.x, 10.x.x.x, 172.x.x.x, 127.0.0.1)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <strong>Account Lockout:</strong> Automatic lockout after 5 failed login attempts (30-minute lockout period)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <strong>Audit Logging:</strong> All authentication attempts (successful and failed) are logged with IP address, timestamp, and details
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <strong>Session Management:</strong> Secure cookie-based sessions with configurable timeout (default: 60 minutes)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <strong>Hybrid Mode:</strong> Falls back to local database authentication if AD is unavailable
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mb-0" role="alert">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Important Notes
+                    </h6>
+                    <ul class="mb-0 small">
+                        <li>Users must have valid Active Directory credentials in the ORION domain</li>
+                        <li>First-time AD users are automatically created with <code>NEW_USER</code> role and must be assigned appropriate roles by an administrator</li>
+                        <li>User display names and email addresses are automatically synced from AD on first login</li>
+                        <li>If AD authentication fails, the system will not fall back to local authentication for that user (users are locked to their configured auth method)</li>
+                        <li>All authentication events are logged to the audit trail for security monitoring</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deployment & Launcher -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-rocket me-2"></i>Deployment & Launcher
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    The application includes a user-friendly GUI launcher (<code>launch.pyw</code>) that provides a single-click 
+                    deployment solution with comprehensive server management capabilities.
+                </p>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-window-restore me-2"></i>GUI Launcher Features
+                        </h6>
+                        <ul class="list-unstyled small">
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>No Console Window:</strong> Runs silently in background (launch.pyw)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Server Control Window:</strong> Start, stop, and restart server with visual feedback
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Automatic Browser Launch:</strong> Opens web interface automatically on startup
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Port Configuration:</strong> Configurable port with persistence (default: 8000)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>HTTPS Management:</strong> Enable/disable HTTPS with certificate selection
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Certificate Generation:</strong> One-click self-signed certificate creation
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Enterprise Certificate Support:</strong> Configure County CA-issued certificates
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Network Detection:</strong> Automatically detects and displays local IP and hostname URLs
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Dependency Management:</strong> Automatic package installation and verification
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check text-success me-2"></i>
+                                <strong>Database Initialization:</strong> Automatic database creation on first run
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-network-wired me-2"></i>Network Deployment
+                        </h6>
+                        <ul class="list-unstyled small">
+                            <li class="mb-2">
+                                <i class="fas fa-server text-info me-2"></i>
+                                <strong>Multi-Interface Binding:</strong> Server binds to 0.0.0.0 for network access
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-server text-info me-2"></i>
+                                <strong>Access Methods:</strong> Local (127.0.0.1), Network IP, or Hostname (calco.local)
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-lock text-warning me-2"></i>
+                                <strong>HTTPS Support:</strong> Self-signed certificates for development/testing
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-shield-alt text-success me-2"></i>
+                                <strong>Enterprise Certificates:</strong> County CA certificates trusted automatically on domain machines
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-certificate text-primary me-2"></i>
+                                <strong>Certificate Installation:</strong> GUI provides instructions for LAN users to install self-signed certs
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-users text-secondary me-2"></i>
+                                <strong>LAN Access:</strong> Multiple users can access simultaneously via network
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-globe text-info me-2"></i>
+                                <strong>Domain Integration:</strong> Works seamlessly with Calaveras County domain (calco.local)
+                            </li>
+                        </ul>
+                        
+                        <div class="alert alert-light mt-3" role="alert">
+                            <h6 class="alert-heading small">
+                                <i class="fas fa-info-circle me-1"></i>Certificate Options
+                            </h6>
+                            <ul class="mb-0 small">
+                                <li><strong>Self-Signed:</strong> Quick setup for development, requires manual installation on client machines</li>
+                                <li><strong>Enterprise CA:</strong> County-issued certificates automatically trusted on all domain machines via Group Policy</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Tables -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-database me-2"></i>Database Schema
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">The system manages 8 core UniteUs data tables plus internal tracking and system tables:</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">Core Data Tables</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>people</strong> - Client demographic and contact information</li>
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>referrals</strong> - Service referral records and status tracking</li>
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>cases</strong> - Case management and coordination records</li>
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>assistance_requests</strong> - Service request details and outcomes</li>
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>assistance_requests_supplemental_responses</strong> - Additional request form data</li>
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>employees</strong> - Staff, provider, and organization information</li>
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>resource_lists</strong> - Available services and resources catalog</li>
+                            <li><i class="fas fa-table text-primary me-2"></i><strong>resource_list_shares</strong> - Resource sharing and permissions</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">System Tables</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>etl_metadata</strong> - ETL job tracking and file processing history</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>etl_jobs</strong> - ETL job execution history and statistics</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>etl_job_files</strong> - Individual file processing results per job</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>data_quality_issues</strong> - Data validation and quality tracking</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>schema_errors</strong> - Schema mismatch detection and resolution tracking</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>file_table_mappings</strong> - Configurable file-to-table name mappings</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>users</strong> - Application user accounts and roles</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>sessions</strong> - Active user sessions and authentication</li>
+                            <li><i class="fas fa-cog text-info me-2"></i><strong>audit_trail</strong> - Comprehensive system activity logging</li>
+                        </ul>
+                        <div class="alert alert-light mt-3" role="alert">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                All tables include optimized indexes for fast queries and proper constraints for data integrity.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Version Info -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <p class="mb-2">
+                    <i class="fas fa-copyright me-1"></i>
+                    2024-2025 Calaveras County Health and Human Services Agency
+                </p>
+                <p class="text-muted small mb-1">
+                    <i class="fas fa-tag me-1"></i>
+                    Version <strong>1.0.0</strong>
+                </p>
+                <p class="text-muted small mb-1">
+                    <i class="fas fa-user-tie me-1"></i>
+                    Developed by <strong>Waqqas Hanafi</strong>
+                </p>
+                <p class="text-muted small mb-0">
+                    <i class="fas fa-code me-1"></i>
+                    Built with ❤️ using modern web technologies and best practices
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

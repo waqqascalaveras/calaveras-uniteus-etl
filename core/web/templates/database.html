@@ -1,0 +1,1157 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Database Browser Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Database browser interface for viewing, searching, and managing database
+    tables and records with advanced filtering and sorting capabilities.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">
+                <i class="fas fa-table me-2"></i>Database Viewer
+            </h1>
+        </div>
+    </div>
+</div>
+
+<!-- Database Info -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Database Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row" id="dbInfoCards">
+                    <!-- Database info cards will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Layout: Sidebar + Content -->
+<div class="d-flex" style="gap: 0;">
+    <!-- Left Sidebar: Available Tables -->
+    <div id="sidebarColumn" style="width: 280px; min-width: 200px; max-width: 600px; flex-shrink: 0;">
+        <div class="card h-100">
+            <div class="card-header py-2">
+                <h6 class="mb-0">
+                    <i class="fas fa-list me-1"></i>Available Tables
+                </h6>
+            </div>
+            <div class="card-body p-0">
+                <div id="tablesLoading" class="text-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="tablesList" class="d-none">
+                    <!-- Tables list will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Resize Handle -->
+    <div id="resizeHandle" class="resize-handle">
+        <div class="resize-handle-line"></div>
+    </div>
+    
+    <!-- Right Content Area -->
+    <div id="contentColumn" style="flex: 1; min-width: 0;">
+        <!-- Search & Filter Bar (Horizontal) -->
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-8">
+                        <label for="searchInput" class="form-label mb-1 small">Search Term</label>
+                        <input type="text" class="form-control form-control-sm" id="searchInput" placeholder="Search across all columns...">
+                    </div>
+                    <div class="col-md-4">
+                        <div class="btn-group btn-group-sm w-100" role="group">
+                            <button id="searchBtn" class="btn btn-primary" disabled>
+                                <i class="fas fa-search me-1"></i>Search
+                            </button>
+                            <button id="clearBtn" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-muted small mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Click column headers to sort instantly
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Display -->
+        <div class="card">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">
+                        <i class="fas fa-database me-2"></i>
+                        <span id="currentTableName">Select a table</span>
+                    </h6>
+                    <small class="text-muted" id="recordCount"></small>
+                </div>
+                <div>
+                    <button id="exportBtn" class="btn btn-outline-success btn-sm me-2" disabled>
+                        <i class="fas fa-download me-1"></i>Export
+                    </button>
+                    <button id="refreshDataBtn" class="btn btn-outline-primary btn-sm" disabled>
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="noTableSelected" class="text-center text-muted py-5">
+                    <i class="fas fa-table fa-3x mb-3 opacity-25"></i>
+                    <h5>No Table Selected</h5>
+                    <p class="mb-0">Select a table from the sidebar to view data</p>
+                </div>
+                
+                <div id="dataLoading" class="text-center py-5 d-none">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted mb-0">Loading table data...</p>
+                </div>
+                
+                <div id="dataContent" class="d-none">
+                    <div class="table-responsive">
+                        <table id="dataTable" class="table table-striped table-hover table-sm mb-0">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <nav id="paginationNav" class="p-3 border-top">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <label for="pageSize" class="form-label me-2 mb-0 small">Rows:</label>
+                                    <select id="pageSize" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="25">25</option>
+                                        <option value="50" selected>50</option>
+                                        <option value="100">100</option>
+                                        <option value="200">200</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="pagination justify-content-end mb-0" id="paginationList">
+                                    <!-- Pagination buttons will be populated here -->
+                                </ul>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                
+                <div id="dataError" class="text-center text-danger py-5 d-none">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                    <h4>Error Loading Data</h4>
+                    <p id="errorMessage">An error occurred while loading the table data.</p>
+                </div>
+                
+                <div id="noData" class="text-center text-muted py-5 d-none">
+                    <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                    <h4>No Data Available</h4>
+                    <p>The selected table contains no records.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Export Section -->
+<div class="row mt-4 mb-4">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-export me-2"></i>Export Entire Database
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Export the complete database in various formats.
+                </p>
+                
+                <div class="row g-3">
+                    <!-- Export Format -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-file-alt me-1"></i>Export Format
+                        </label>
+                        <select id="exportFormat" class="form-select">
+                            <option value="sqlite" selected>SQLite Database File (.db)</option>
+                            <option value="csv">CSV Files (Zipped) - One file per table</option>
+                            <option value="excel">Excel Workbook (.xlsx) - One sheet per table</option>
+                            <option value="sql">SQL Dump (.sql) - Complete database</option>
+                            <option value="json">JSON Files (Zipped) - One file per table</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="fas fa-lightbulb"></i> 
+                            Multiple files (CSV/JSON) are zipped; single files (Excel/SQL/SQLite) are not zipped
+                        </div>
+                    </div>
+                    
+                    <!-- Export Options -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-cog me-1"></i>Export Options
+                        </label>
+                        <select id="exportOptions" class="form-select">
+                            <option value="both">Data and Structure</option>
+                            <option value="structure">Structure Only (Schema)</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle"></i>
+                            Structure includes table definitions and indexes
+                        </div>
+                    </div>
+                    
+                    <!-- Table Selection -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-table me-1"></i>Tables to Export
+                        </label>
+                        <select id="exportTables" class="form-select">
+                            <option value="all">All Tables</option>
+                            <option value="select">Select Specific Tables...</option>
+                        </select>
+                        <div class="form-text">
+                            <i class="fas fa-check-circle"></i>
+                            All tables by default
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Table Selection Checkboxes (hidden initially) -->
+                <div id="tableSelectionContainer" class="mt-3 d-none">
+                    <div class="card">
+                        <div class="card-header py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">Select Tables to Export</span>
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="selectAllTables()">
+                                        <i class="fas fa-check-square me-1"></i>Select All
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllTables()">
+                                        <i class="fas fa-square me-1"></i>Deselect All
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                            <div class="row" id="tableCheckboxes">
+                                <!-- Table checkboxes will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Options (Collapsible) -->
+                <div class="mt-3">
+                    <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" href="#advancedOptions">
+                        <i class="fas fa-sliders-h me-1"></i>Advanced Options
+                    </a>
+                </div>
+                
+                <div class="collapse mt-3" id="advancedOptions">
+                    <div class="card card-body bg-light">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="includeMetadata" checked>
+                                    <label class="form-check-label" for="includeMetadata">
+                                        Include ETL Metadata
+                                    </label>
+                                </div>
+                                <small class="text-muted">Export processing history and file metadata</small>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="streamLarge">
+                                    <label class="form-check-label" for="streamLarge">
+                                        Stream Large Tables
+                                    </label>
+                                </div>
+                                <small class="text-muted">Chunk large tables to prevent memory issues</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Progress -->
+                <div id="exportProgress" class="mt-3 d-none">
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Exporting...</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <strong>Exporting Database...</strong>
+                                <div class="progress mt-2" style="height: 20px;">
+                                    <div id="exportProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         role="progressbar" style="width: 0%">0%</div>
+                                </div>
+                                <small id="exportStatus" class="text-muted">Preparing export...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Export Button -->
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <div class="text-muted small">
+                        <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                        <strong>Note:</strong> Large databases may take several minutes to export
+                    </div>
+                    <button id="startExportBtn" class="btn btn-success btn-lg" onclick="startDatabaseExport()">
+                        <i class="fas fa-download me-2"></i>Export Database
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Query Modal -->
+<div class="modal fade" id="queryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Custom SQL Query</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="customQuery" class="form-label">SQL Query (SELECT only)</label>
+                    <textarea class="form-control" id="customQuery" rows="5" 
+                              placeholder="SELECT * FROM people LIMIT 10;"></textarea>
+                    <div class="form-text">Only SELECT statements are allowed for security.</div>
+                </div>
+                <div class="mb-3">
+                    <label for="queryLimit" class="form-label">Result Limit</label>
+                    <input type="number" class="form-control" id="queryLimit" value="100" min="1" max="1000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="executeQueryBtn">
+                    <i class="fas fa-play me-1"></i>Execute Query
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentTable = null;
+let currentPage = 0;
+let pageSize = 50;
+let totalRecords = 0;
+let allTables = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadDatabaseInfo();
+    loadTables();
+    
+    // Event listeners
+    document.getElementById('searchBtn').addEventListener('click', performSearch);
+    document.getElementById('clearBtn').addEventListener('click', clearFilters);
+    document.getElementById('refreshDataBtn').addEventListener('click', refreshCurrentTable);
+    document.getElementById('exportBtn').addEventListener('click', exportTable);
+    document.getElementById('pageSize').addEventListener('change', changePageSize);
+    document.getElementById('executeQueryBtn').addEventListener('click', executeCustomQuery);
+    
+    // Enter key for search
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    // Initialize resize functionality
+    initializeSidebarResize();
+});
+
+// Sidebar resize functionality
+function initializeSidebarResize() {
+    const resizeHandle = document.getElementById('resizeHandle');
+    const sidebar = document.getElementById('sidebarColumn');
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+    
+    // Store event handlers for cleanup
+    const mouseMoveHandler = function(e) {
+        if (!isResizing) return;
+        
+        const diff = e.clientX - startX;
+        const newWidth = startWidth + diff;
+        
+        // Apply constraints
+        const minWidth = parseInt(sidebar.style.minWidth) || 200;
+        const maxWidth = parseInt(sidebar.style.maxWidth) || 600;
+        
+        if (newWidth >= minWidth && newWidth <= maxWidth) {
+            sidebar.style.width = newWidth + 'px';
+        }
+    };
+    
+    const mouseUpHandler = function() {
+        if (isResizing) {
+            isResizing = false;
+            resizeHandle.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+    };
+    
+    resizeHandle.addEventListener('mousedown', function(e) {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = sidebar.offsetWidth;
+        resizeHandle.classList.add('resizing');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', mouseMoveHandler);
+    document.addEventListener('mouseup', mouseUpHandler);
+    
+    // Cleanup event listeners on page unload
+    window.addEventListener('beforeunload', function() {
+        document.removeEventListener('mousemove', mouseMoveHandler);
+        document.removeEventListener('mouseup', mouseUpHandler);
+    });
+}
+
+
+async function loadDatabaseInfo() {
+    try {
+        const response = await fetch('/api/database/info');
+        const data = await response.json();
+        
+        const cardsContainer = document.getElementById('dbInfoCards');
+        const info = data.database_info;
+        
+        cardsContainer.innerHTML = `
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-primary">${info.total_tables || 0}</h4>
+                    <small class="text-muted">Total Tables</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-success">${(info.total_records || 0).toLocaleString()}</h4>
+                    <small class="text-muted">Total Records</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-info">${Math.round((info.database_size_mb || 0) * 100) / 100} MB</h4>
+                    <small class="text-muted">Database Size</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-center">
+                    <h4 class="text-warning">${info.total_files_processed || 0}</h4>
+                    <small class="text-muted">Files Processed</small>
+                </div>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Error loading database info:', error);
+    }
+}
+
+async function loadTables() {
+    try {
+        const response = await cachedFetch('/api/database/tables', {}, 300000); // Cache for 5 minutes (session-based)
+        const data = await response.json();
+        
+        allTables = data.tables;
+        
+        const tablesContainer = document.getElementById('tablesList');
+        const loadingDiv = document.getElementById('tablesLoading');
+        
+        loadingDiv.classList.add('d-none');
+        
+        if (allTables.length === 0) {
+            tablesContainer.innerHTML = '<p class="text-muted">No tables found in database.</p>';
+        } else {
+            let html = '<div class="list-group">';
+            
+            allTables.forEach(table => {
+                const recordCountText = table.record_count > 0 ? 
+                    `${table.record_count.toLocaleString()} records` : 
+                    'No records';
+                
+                html += `
+                    <div class="list-group-item table-item-wrapper">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <button type="button" class="btn btn-link text-start flex-grow-1 table-item-btn p-0" 
+                                    data-table="${table.name}" style="text-decoration: none; color: inherit; min-width: 0;">
+                                <h6 class="mb-1 text-truncate" title="${table.name}">${table.name}</h6>
+                                <small class="text-muted text-truncate d-block">
+                                    ${table.columns.length} columns
+                                    <i class="fas fa-circle mx-1" style="font-size: 4px; vertical-align: middle;"></i>
+                                    ${recordCountText}
+                                </small>
+                            </button>
+                            ${table.record_count > 0 ? `
+                            <button class="btn btn-sm btn-outline-success ms-2 flex-shrink-0" 
+                                    onclick="event.stopPropagation(); exportTable('${table.name}')"
+                                    title="Export to CSV">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            tablesContainer.innerHTML = html;
+            
+            // Add click listeners to table items
+            document.querySelectorAll('.table-item-btn').forEach(item => {
+                item.addEventListener('click', function() {
+                    const tableName = this.dataset.table;
+                    selectTable(tableName);
+                });
+            });
+        }
+        
+        tablesContainer.classList.remove('d-none');
+        
+    } catch (error) {
+        console.error('Error loading tables:', error);
+        showError('Failed to load tables');
+    }
+}
+
+function selectTable(tableName) {
+    currentTable = tableName;
+    currentPage = 0;
+    
+    // Update UI - Remove 'selected' class from all wrappers, add to clicked one
+    document.querySelectorAll('.table-item-wrapper').forEach(wrapper => {
+        wrapper.classList.remove('selected');
+    });
+    
+    const selectedWrapper = document.querySelector(`[data-table="${tableName}"]`).closest('.table-item-wrapper');
+    if (selectedWrapper) {
+        selectedWrapper.classList.add('selected');
+    }
+    
+    // Update sort column options
+    const table = allTables.find(t => t.name === tableName);
+    
+    // Enable controls
+    document.getElementById('searchBtn').disabled = false;
+    document.getElementById('refreshDataBtn').disabled = false;
+    document.getElementById('exportBtn').disabled = false;
+    
+    // Load table data
+    loadTableData();
+}
+
+async function loadTableData(searchTerm = '', sortColumn = '', sortDirection = 'asc') {
+    if (!currentTable) return;
+    
+    showDataLoading();
+    
+    try {
+        let url = `/api/database/table/${currentTable}?limit=${pageSize}&offset=${currentPage * pageSize}`;
+        let requestData = null;
+        let method = 'GET';
+        
+        if (searchTerm) {
+            // Use search endpoint
+            url = '/api/database/table/search';
+            method = 'POST';
+            requestData = {
+                table_name: currentTable,
+                search_term: searchTerm,
+                limit: pageSize,
+                offset: currentPage * pageSize
+            };
+        } else if (sortColumn) {
+            // Use sort endpoint
+            url = '/api/database/table/sort';
+            method = 'POST';
+            requestData = {
+                table_name: currentTable,
+                sort_column: sortColumn,
+                sort_direction: sortDirection,
+                limit: pageSize,
+                offset: currentPage * pageSize
+            };
+        }
+        
+        const options = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+        
+        if (requestData) {
+            options.body = JSON.stringify(requestData);
+        }
+        
+        const response = await fetch(url, options);
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+            displayTableData(data);
+        } else {
+            showDataError(data.error || 'Failed to load table data');
+        }
+        
+    } catch (error) {
+        console.error('Error loading table data:', error);
+        showDataError('Failed to load table data');
+    }
+}
+
+function displayTableData(data) {
+    const table = document.getElementById('dataTable');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    
+    // Update table name and record count
+    document.getElementById('currentTableName').textContent = data.table_name;
+    document.getElementById('recordCount').textContent = 
+        `Showing ${data.data.length} of ${data.total_records || 'unknown'} records`;
+    
+    totalRecords = data.total_records || data.row_count || 0;
+    
+    // Store data for client-side sorting
+    window.currentTableData = data;
+    window.currentSortColumn = null;
+    window.currentSortDirection = 'asc';
+    
+    // Clear existing content
+    thead.innerHTML = '';
+    tbody.innerHTML = '';
+    
+    if (data.data.length === 0) {
+        showNoData();
+        return;
+    }
+    
+    // Create header with sortable columns
+    const headerRow = thead.insertRow();
+    data.columns.forEach((column, index) => {
+        const th = document.createElement('th');
+        th.textContent = column;
+        th.classList.add('sortable');
+        th.dataset.column = column;
+        th.dataset.index = index;
+        
+        // Add click handler for sorting
+        th.addEventListener('click', function() {
+            sortTableByColumn(column, index);
+        });
+        
+        headerRow.appendChild(th);
+    });
+    
+    // Render rows
+    renderTableRows(data.data, data.columns);
+    
+    // Update pagination
+    updatePagination();
+    
+    // Show data content
+    hideAllDataStates();
+    document.getElementById('dataContent').classList.remove('d-none');
+}
+
+function renderTableRows(records, columns) {
+    const tbody = document.getElementById('dataTable').querySelector('tbody');
+    tbody.innerHTML = '';
+    
+    records.forEach(record => {
+        const row = tbody.insertRow();
+        columns.forEach(column => {
+            const cell = row.insertCell();
+            const value = record[column];
+            
+            if (value === null || value === undefined) {
+                cell.innerHTML = '<span class="text-muted">NULL</span>';
+            } else if (typeof value === 'string' && value.length > 100) {
+                cell.innerHTML = `
+                    <span class="truncated-text" title="${escapeHtml(value)}">
+                        ${escapeHtml(value.substring(0, 100))}...
+                    </span>
+                `;
+            } else {
+                cell.textContent = value;
+            }
+        });
+    });
+}
+
+function sortTableByColumn(columnName, columnIndex) {
+    if (!window.currentTableData) return;
+    
+    const data = window.currentTableData;
+    const thead = document.getElementById('dataTable').querySelector('thead');
+    
+    // Determine sort direction
+    if (window.currentSortColumn === columnName) {
+        // Toggle direction
+        window.currentSortDirection = window.currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+        // New column, default to ascending
+        window.currentSortColumn = columnName;
+        window.currentSortDirection = 'asc';
+    }
+    
+    // Update header classes
+    thead.querySelectorAll('th').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    const currentTh = thead.querySelector(`th[data-column="${columnName}"]`);
+    if (currentTh) {
+        currentTh.classList.add(window.currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+    
+    // Sort the data
+    const sortedData = [...data.data].sort((a, b) => {
+        let aVal = a[columnName];
+        let bVal = b[columnName];
+        
+        // Handle null/undefined
+        if (aVal === null || aVal === undefined) return 1;
+        if (bVal === null || bVal === undefined) return -1;
+        
+        // Convert to comparable values
+        const aNum = parseFloat(aVal);
+        const bNum = parseFloat(bVal);
+        
+        // If both are numbers, compare numerically
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+            return window.currentSortDirection === 'asc' ? aNum - bNum : bNum - aNum;
+        }
+        
+        // Otherwise, compare as strings
+        const aStr = String(aVal).toLowerCase();
+        const bStr = String(bVal).toLowerCase();
+        
+        if (window.currentSortDirection === 'asc') {
+            return aStr.localeCompare(bStr);
+        } else {
+            return bStr.localeCompare(aStr);
+        }
+    });
+    
+    // Re-render with sorted data
+    renderTableRows(sortedData, data.columns);
+}
+
+function updatePagination() {
+    const totalPages = Math.ceil(totalRecords / pageSize);
+    const paginationList = document.getElementById('paginationList');
+    
+    let html = '';
+    
+    // Previous button
+    const prevDisabled = currentPage === 0 ? 'disabled' : '';
+    html += `
+        <li class="page-item ${prevDisabled}">
+            <button class="page-link" onclick="changePage(${currentPage - 1})" ${prevDisabled}>Previous</button>
+        </li>
+    `;
+    
+    // Page numbers
+    const startPage = Math.max(0, currentPage - 2);
+    const endPage = Math.min(totalPages - 1, currentPage + 2);
+    
+    if (startPage > 0) {
+        html += '<li class="page-item"><button class="page-link" onclick="changePage(0)">1</button></li>';
+        if (startPage > 1) {
+            html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+        }
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const active = i === currentPage ? 'active' : '';
+        html += `
+            <li class="page-item ${active}">
+                <button class="page-link" onclick="changePage(${i})">${i + 1}</button>
+            </li>
+        `;
+    }
+    
+    if (endPage < totalPages - 1) {
+        if (endPage < totalPages - 2) {
+            html += '<li class="page-item disabled"><span class="page-link">...</span></li>';
+        }
+        html += `<li class="page-item"><button class="page-link" onclick="changePage(${totalPages - 1})">${totalPages}</button></li>`;
+    }
+    
+    // Next button
+    const nextDisabled = currentPage >= totalPages - 1 ? 'disabled' : '';
+    html += `
+        <li class="page-item ${nextDisabled}">
+            <button class="page-link" onclick="changePage(${currentPage + 1})" ${nextDisabled}>Next</button>
+        </li>
+    `;
+    
+    paginationList.innerHTML = html;
+}
+
+function changePage(page) {
+    if (page < 0 || page >= Math.ceil(totalRecords / pageSize)) return;
+    
+    currentPage = page;
+    
+    // Maintain current search/sort state
+    const searchTerm = document.getElementById('searchInput').value;
+    const sortColumn = document.getElementById('sortColumn').value;
+    const sortDirection = document.getElementById('sortDirection').value;
+    
+    loadTableData(searchTerm, sortColumn, sortDirection);
+}
+
+function changePageSize() {
+    pageSize = parseInt(document.getElementById('pageSize').value);
+    currentPage = 0;
+    
+    if (currentTable) {
+        const searchTerm = document.getElementById('searchInput').value;
+        const sortColumn = document.getElementById('sortColumn').value;
+        const sortDirection = document.getElementById('sortDirection').value;
+        
+        loadTableData(searchTerm, sortColumn, sortDirection);
+    }
+}
+
+function performSearch() {
+    if (!currentTable) return;
+    
+    const searchTerm = document.getElementById('searchInput').value.trim();
+    currentPage = 0;
+    
+    loadTableData(searchTerm);
+}
+
+function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    
+    currentPage = 0;
+    
+    if (currentTable) {
+        loadTableData();
+    }
+}
+
+function refreshCurrentTable() {
+    if (currentTable) {
+        const searchTerm = document.getElementById('searchInput').value;
+        
+        loadTableData(searchTerm);
+    }
+}
+
+async function exportTable() {
+    if (!currentTable) return;
+    
+    try {
+        const response = await fetch(`/api/database/export/${currentTable}`);
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `${currentTable}_export.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showSuccess('Table exported successfully');
+        } else {
+            const error = await response.json();
+            showError(error.detail || 'Export failed');
+        }
+        
+    } catch (error) {
+        console.error('Error exporting table:', error);
+        showError('Export failed');
+    }
+}
+
+async function executeCustomQuery() {
+    const query = document.getElementById('customQuery').value.trim();
+    const limit = parseInt(document.getElementById('queryLimit').value);
+    
+    if (!query) {
+        showError('Please enter a SQL query');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/database/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                query: query,
+                limit: limit
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Display query results in the main table
+            document.getElementById('currentTableName').textContent = 'Custom Query Results';
+            document.getElementById('recordCount').textContent = 
+                `${data.row_count} records (${data.execution_time_ms}ms)`;
+            
+            displayTableData({
+                table_name: 'Query Results',
+                data: data.data,
+                columns: data.columns,
+                total_records: data.row_count
+            });
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('queryModal'));
+            modal.hide();
+            
+            showSuccess('Query executed successfully');
+        } else {
+            showError(data.error || 'Query execution failed');
+        }
+        
+    } catch (error) {
+        console.error('Error executing query:', error);
+        showError('Query execution failed');
+    }
+}
+
+// Helper functions
+function showDataLoading() {
+    hideAllDataStates();
+    document.getElementById('dataLoading').classList.remove('d-none');
+}
+
+function showDataError(message) {
+    hideAllDataStates();
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('dataError').classList.remove('d-none');
+}
+
+function showNoData() {
+    hideAllDataStates();
+    document.getElementById('noData').classList.remove('d-none');
+}
+
+function hideAllDataStates() {
+    document.getElementById('noTableSelected').classList.add('d-none');
+    document.getElementById('dataLoading').classList.add('d-none');
+    document.getElementById('dataContent').classList.add('d-none');
+    document.getElementById('dataError').classList.add('d-none');
+    document.getElementById('noData').classList.add('d-none');
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+// Export functions
+// New comprehensive database export functionality
+function startDatabaseExport() {
+    const format = document.getElementById('exportFormat').value;
+    const options = document.getElementById('exportOptions').value;
+    const tablesSelection = document.getElementById('exportTables').value;
+    const includeMetadata = document.getElementById('includeMetadata').checked;
+    const streamLarge = document.getElementById('streamLarge').checked;
+    
+    // Get selected tables if specific selection
+    let selectedTables = [];
+    if (tablesSelection === 'select') {
+        const checkboxes = document.querySelectorAll('#tableCheckboxes input[type="checkbox"]:checked');
+        selectedTables = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (selectedTables.length === 0) {
+            showError('Please select at least one table to export');
+            return;
+        }
+    }
+    
+    // Show progress
+    document.getElementById('exportProgress').classList.remove('d-none');
+    document.getElementById('startExportBtn').disabled = true;
+    
+    // Build export URL with parameters (compress is always true for formats that need it)
+    const params = new URLSearchParams({
+        format: format,
+        options: options,
+        include_metadata: includeMetadata,
+        compress: true,
+        stream_large: streamLarge,
+        tables: tablesSelection === 'all' ? 'all' : selectedTables.join(',')
+    });
+    
+    // Simulate progress (real progress would come from server)
+    let progress = 0;
+    let progressInterval = setInterval(() => {
+        progress += 5;
+        if (progress <= 90) {
+            updateExportProgress(progress, `Processing tables... ${progress}%`);
+        }
+    }, 500);
+    
+    // Ensure interval is cleared on page unload
+    const originalInterval = progressInterval;
+    window.addEventListener('beforeunload', () => {
+        if (originalInterval) clearInterval(originalInterval);
+    });
+    
+    // Trigger download
+    fetch(`/api/database/export?${params.toString()}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Export failed');
+            return response.blob();
+        })
+        .then(blob => {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            updateExportProgress(100, 'Export complete!');
+            
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `database_export_${new Date().toISOString().split('T')[0]}.${getFileExtension(format)}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showSuccess('Database exported successfully!');
+            
+            // Reset UI after 2 seconds
+            setTimeout(() => {
+                document.getElementById('exportProgress').classList.add('d-none');
+                document.getElementById('startExportBtn').disabled = false;
+                updateExportProgress(0, 'Preparing export...');
+            }, 2000);
+        })
+        .catch(error => {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+            console.error('Export error:', error);
+            showError('Failed to export database: ' + error.message);
+            document.getElementById('exportProgress').classList.add('d-none');
+            document.getElementById('startExportBtn').disabled = false;
+        });
+}
+
+function updateExportProgress(percent, status) {
+    const progressBar = document.getElementById('exportProgressBar');
+    progressBar.style.width = percent + '%';
+    progressBar.textContent = percent + '%';
+    document.getElementById('exportStatus').textContent = status;
+}
+
+function getFileExtension(format) {
+    const extensions = {
+        'csv': 'zip',
+        'excel': 'xlsx',
+        'sql': 'sql',
+        'json': 'zip',
+        'sqlite': 'db'
+    };
+    return extensions[format] || 'zip';
+}
+
+function selectAllTables() {
+    const checkboxes = document.querySelectorAll('#tableCheckboxes input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = true);
+}
+
+function deselectAllTables() {
+    const checkboxes = document.querySelectorAll('#tableCheckboxes input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false);
+}
+
+// Populate table checkboxes when tables are loaded
+function populateTableCheckboxes() {
+    const container = document.getElementById('tableCheckboxes');
+    container.innerHTML = '';
+    
+    allTables.forEach(table => {
+        const col = document.createElement('div');
+        col.className = 'col-md-4 mb-2';
+        const rowCount = table.row_count !== undefined ? table.row_count : 0;
+        col.innerHTML = `
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" value="${table.name}" id="table_${table.name}" checked>
+                <label class="form-check-label" for="table_${table.name}">
+                    ${table.name} <small class="text-muted">(${rowCount} rows)</small>
+                </label>
+            </div>
+        `;
+        container.appendChild(col);
+    });
+}
+
+// Toggle table selection UI
+document.getElementById('exportTables').addEventListener('change', function() {
+    const container = document.getElementById('tableSelectionContainer');
+    if (this.value === 'select') {
+        container.classList.remove('d-none');
+        populateTableCheckboxes();
+    } else {
+        container.classList.add('d-none');
+    }
+});
+
+</script>
+{% endblock %}

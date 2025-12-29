@@ -1,0 +1,488 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel JSON Log Files
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for configuring and viewing JSON log files.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'logging_json' %}
+{% set page_title = 'JSON Log Files' %}
+{% set page_icon = 'file-code' %}
+{% set page_description = 'Configure and view JSON structured log files for SIEM integration' %}
+
+{% block admin_content %}
+
+<!-- JSON Logging Configuration Card -->
+<div class="card mb-4" id="jsonLoggingCard" style="border: 2px solid #cbd5e0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: border-color 0.3s;">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-cog me-2" style="color: #2c5282;"></i>Configuration
+            </h5>
+            <div class="d-flex align-items-center">
+                <label class="form-check-label me-2" for="jsonLoggingEnabled" style="font-weight: 500; font-size: 14px; color: #2d3748; margin: 0; cursor: pointer;">
+                    Enable JSON Logging
+                </label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="jsonLoggingEnabled" checked style="width: 50px; height: 25px; cursor: pointer;" onchange="toggleJSONLogging()">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <form id="jsonLoggingForm">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                        <i class="fas fa-folder me-1"></i>Log Directory Path
+                    </label>
+                    <input type="text" class="form-control" id="jsonLogPath" value="data/logs/siem" style="font-size: 14px;">
+                    <small class="text-muted">Directory for monthly JSON log files (YYYY-MM format)</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Minimum Severity Level
+                    </label>
+                    <select class="form-select" id="jsonLogMinSeverity" style="font-size: 14px;">
+                        <option value="DEBUG">DEBUG (7) - All events</option>
+                        <option value="INFO">INFO (6) - Informational and above</option>
+                        <option value="NOTICE">NOTICE (5) - Notable events and above</option>
+                        <option value="WARNING" selected>WARNING (4) - Warnings and above</option>
+                        <option value="ERROR">ERROR (3) - Errors and above</option>
+                        <option value="CRITICAL">CRITICAL (2) - Critical and above</option>
+                        <option value="ALERT">ALERT (1) - Alerts and above</option>
+                        <option value="EMERGENCY">EMERGENCY (0) - Emergency only</option>
+                    </select>
+                    <small class="text-muted">Only log events at or above this severity</small>
+                </div>
+            </div>
+            
+            <div class="alert alert-info" style="background: #ebf8ff; border-color: #90cdf4; color: #2c5282;">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>About JSON Logging:</strong> This is one of three SIEM logging backends (JSON files, Windows Event Log, and Syslog).
+                JSON logs are stored as monthly files (e.g., <code>siem_events_2025-12.json</code>) in the configured directory.
+                Each line is a separate JSON object containing event information, making it easy for SIEM systems to parse and analyze.
+            </div>
+            
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary me-2" onclick="testJsonLogging()">
+                    <i class="fas fa-vial me-1"></i>Test Logging
+                </button>
+                <!-- Save button hidden - using top/bottom save bars instead -->
+                <button type="submit" class="btn btn-primary" style="display: none;">
+                    <i class="fas fa-save me-1"></i>Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Log File Viewer Card -->
+<div class="card mb-4" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-list me-2" style="color: #2c5282;"></i>Recent Log Entries
+            </h5>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary me-2" onclick="downloadLogFile()">
+                    <i class="fas fa-download me-1"></i>Download
+                </button>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshLogEntries()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <div id="logEntries">
+            <p class="text-muted">Loading log entries...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load current settings
+async function loadJsonLoggingSettings() {
+    try {
+        const response = await fetchWithRoleCheck('/api/settings/siem');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            const enabledCheckbox = document.getElementById('jsonLoggingEnabled');
+            const logPathInput = document.getElementById('jsonLogPath');
+            const minSeveritySelect = document.getElementById('jsonLogMinSeverity');
+            
+            if (enabledCheckbox) {
+                enabledCheckbox.checked = Boolean(settings.enable_json_logging);
+            }
+            if (logPathInput) {
+                logPathInput.value = settings.json_log_path || 'data/logs/siem';
+            }
+            if (minSeveritySelect) {
+                minSeveritySelect.value = settings.json_log_min_severity || 'WARNING';
+            }
+            
+            // Update label if element exists
+            updateEnabledLabel();
+        }
+        
+        // Load JSON logging info (this will update the status badge)
+        await loadJsonLoggingInfo();
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showToast('Failed to load settings', 'error');
+        // Still try to load info even if settings fail
+        await loadJsonLoggingInfo();
+    }
+}
+
+async function loadJsonLoggingInfo() {
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/logging/json/status');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        const infoDiv = document.getElementById('jsonLoggingInfo');
+        const statusBadge = document.getElementById('jsonLoggingStatus');
+        
+        if (data.success && data.info) {
+            const info = data.info;
+            
+            // Update status badge
+            if (statusBadge) {
+                if (info.enabled) {
+                    statusBadge.innerHTML = '<i class="fas fa-circle me-1" style="font-size: 8px;"></i>Enabled';
+                    statusBadge.style.background = '#48bb78';
+                } else {
+                    statusBadge.innerHTML = '<i class="fas fa-circle me-1" style="font-size: 8px;"></i>Disabled';
+                    statusBadge.style.background = '#a0aec0';
+                }
+            }
+            
+            let html = '<div class="row">';
+            
+            html += `<div class="col-md-6 mb-3">
+                <strong>Log File Path:</strong> ${info.log_path || 'N/A'}<br>
+                <strong>File Exists:</strong> ${info.file_exists ? '<span class="text-success">Yes</span>' : '<span class="text-warning">No</span>'}<br>
+                <strong>File Size:</strong> ${info.file_size ? formatBytes(info.file_size) : 'N/A'}
+            </div>`;
+            
+            html += `<div class="col-md-6 mb-3">
+                <strong>Status:</strong> ${info.enabled ? '<span class="text-success">Enabled</span>' : '<span class="text-muted">Disabled</span>'}<br>
+                <strong>Entries:</strong> ${info.entries_count || 0}<br>
+                <strong>Last Updated:</strong> ${info.last_updated ? new Date(info.last_updated).toLocaleString() : 'N/A'}
+            </div>`;
+            
+            html += '</div>';
+            
+            if (!info.file_exists && info.enabled) {
+                html += '<div class="alert alert-info mt-3"><i class="fas fa-info-circle me-2"></i>The log file will be created when the first event is logged.</div>';
+            }
+            
+            infoDiv.innerHTML = html;
+        } else {
+            infoDiv.innerHTML = '<p class="text-danger">Failed to load JSON logging information</p>';
+            if (statusBadge) {
+                statusBadge.innerHTML = '<i class="fas fa-circle me-1" style="font-size: 8px;"></i>Error';
+                statusBadge.style.background = '#e53e3e';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading JSON logging info:', error);
+        const infoDiv = document.getElementById('jsonLoggingInfo');
+        const statusBadge = document.getElementById('jsonLoggingStatus');
+        
+        if (infoDiv) {
+            infoDiv.innerHTML = '<p class="text-danger">Error loading information: ' + error.message + '</p>';
+        }
+        if (statusBadge) {
+            statusBadge.innerHTML = '<i class="fas fa-circle me-1" style="font-size: 8px;"></i>Error';
+            statusBadge.style.background = '#e53e3e';
+        }
+    }
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function updateEnabledLabel() {
+    const enabled = document.getElementById('jsonLoggingEnabled').checked;
+    const labelElement = document.getElementById('jsonLoggingEnabledLabel');
+    if (labelElement) {
+        labelElement.textContent = enabled ? 'Enabled' : 'Disabled';
+    }
+}
+
+// Only add event listener if checkbox exists
+const enabledCheckbox = document.getElementById('jsonLoggingEnabled');
+if (enabledCheckbox) {
+    enabledCheckbox.addEventListener('change', updateEnabledLabel);
+}
+
+// Save settings
+document.getElementById('jsonLoggingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const enabled = document.getElementById('jsonLoggingEnabled').checked;
+    const logPath = document.getElementById('jsonLogPath').value;
+    
+    // Get current SIEM settings and update JSON logging setting
+    try {
+        const response = await fetchWithRoleCheck('/api/settings/siem');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            settings.enable_json_logging = enabled;
+            settings.json_log_path = logPath;
+            
+            // Save updated settings
+            const formData = new FormData();
+            formData.append('enabled', settings.enabled || false);
+            formData.append('enable_json_logging', enabled);
+            formData.append('enable_windows_event_log', settings.enable_windows_event_log || false);
+            formData.append('json_log_path', logPath);
+            formData.append('syslog_enabled', settings.syslog_enabled || false);
+            formData.append('syslog_host', settings.syslog_host || 'localhost');
+            formData.append('syslog_port', settings.syslog_port || 514);
+            formData.append('syslog_protocol', settings.syslog_protocol || 'UDP');
+            formData.append('include_sensitive_data', settings.include_sensitive_data || false);
+            
+            const saveResponse = await fetchWithRoleCheck('/api/settings/siem', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const saveData = await saveResponse.json();
+            
+            if (saveData.success) {
+                showToast('JSON logging settings saved successfully!', 'success');
+                await loadJsonLoggingSettings();
+                // Mark form as saved
+                if (typeof formChangeTracker !== 'undefined') {
+                    formChangeTracker.markSaved('jsonLoggingForm');
+                }
+                // Refresh json pill
+                if (typeof window.refreshNavPill === 'function') {
+                    window.refreshNavPill('json');
+                }
+                updateJSONCardStyle();
+            } else {
+                showToast('Failed to save settings: ' + (saveData.error || 'Unknown error'), 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showToast('Failed to save settings', 'error');
+    }
+});
+
+// Test JSON logging
+async function testJsonLogging() {
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/logging/json/test', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Test event logged successfully!', 'success');
+            setTimeout(refreshLogEntries, 1000);
+        } else {
+            showToast('Failed to log test event: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error testing JSON logging:', error);
+        showToast('Failed to test JSON logging', 'error');
+    }
+}
+
+// Refresh log entries
+async function refreshLogEntries() {
+    const entriesDiv = document.getElementById('logEntries');
+    entriesDiv.innerHTML = '<p class="text-muted">Loading log entries...</p>';
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/logging/json/entries?limit=20');
+        const data = await response.json();
+        
+        if (data.success && data.entries) {
+            if (data.entries.length === 0) {
+                entriesDiv.innerHTML = '<p class="text-muted">No log entries found. Try logging a test event.</p>';
+            } else {
+                let html = '<div class="table-responsive"><table class="table table-sm table-hover">';
+                html += '<thead><tr><th>Time</th><th>Event Type</th><th>Severity</th><th>Message</th><th>User</th></tr></thead><tbody>';
+                
+                data.entries.forEach(entry => {
+                    const severityColors = {
+                        'EMERGENCY': 'danger',
+                        'ALERT': 'danger',
+                        'CRITICAL': 'danger',
+                        'ERROR': 'danger',
+                        'WARNING': 'warning',
+                        'NOTICE': 'info',
+                        'INFO': 'info',
+                        'DEBUG': 'secondary'
+                    };
+                    
+                    html += `<tr>
+                        <td>${entry.timestamp || 'N/A'}</td>
+                        <td><span class="badge bg-secondary">${entry.event_type || 'N/A'}</span></td>
+                        <td><span class="badge bg-${severityColors[entry.severity] || 'info'}">${entry.severity || 'INFO'}</span></td>
+                        <td>${entry.event_message || 'N/A'}</td>
+                        <td>${entry.username || 'N/A'}</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                entriesDiv.innerHTML = html;
+            }
+        } else {
+            entriesDiv.innerHTML = '<p class="text-muted">Unable to load log entries. The log file may not exist yet.</p>';
+        }
+    } catch (error) {
+        console.error('Error refreshing log entries:', error);
+        entriesDiv.innerHTML = '<p class="text-danger">Error loading log entries</p>';
+    }
+}
+
+// Download log file
+function downloadLogFile() {
+    const logPath = document.getElementById('jsonLogPath').value;
+    window.open(`/api/admin/logging/json/download?path=${encodeURIComponent(logPath)}`, '_blank');
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}`;
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.style.minWidth = '300px';
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Toggle JSON logging and save immediately
+async function toggleJSONLogging() {
+    const enabled = document.getElementById('jsonLoggingEnabled').checked;
+    const logPath = document.getElementById('jsonLogPath').value;
+    const minSeverity = document.getElementById('jsonLogMinSeverity').value;
+    
+    try {
+        // Get current SIEM settings
+        const response = await fetchWithRoleCheck('/api/settings/siem');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            
+            // Update JSON logging setting
+            const formData = new FormData();
+            formData.append('enabled', settings.enabled || false);
+            formData.append('enable_json_logging', enabled);
+            formData.append('enable_windows_event_log', settings.enable_windows_event_log || false);
+            formData.append('json_log_path', logPath);
+            formData.append('syslog_enabled', settings.syslog_enabled || false);
+            formData.append('syslog_host', settings.syslog_host || 'localhost');
+            formData.append('syslog_port', settings.syslog_port || 514);
+            formData.append('syslog_protocol', settings.syslog_protocol || 'UDP');
+            formData.append('include_sensitive_data', settings.include_sensitive_data || false);
+            formData.append('json_log_min_severity', minSeverity);
+            formData.append('windows_event_log_min_severity', settings.windows_event_log_min_severity || 'ERROR');
+            formData.append('syslog_min_severity', settings.syslog_min_severity || 'ERROR');
+            
+            const saveResponse = await fetchWithRoleCheck('/api/settings/siem', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const saveData = await saveResponse.json();
+            
+            if (saveData.success) {
+                showToast(`JSON logging ${enabled ? 'enabled' : 'disabled'} successfully!`, 'success');
+                await loadJsonLoggingInfo();
+                updateJSONCardStyle();
+                // Refresh json pill
+                if (typeof window.refreshNavPill === 'function') {
+                    window.refreshNavPill('json');
+                }
+            } else {
+                showToast('Failed to save settings: ' + (saveData.error || 'Unknown error'), 'error');
+                // Revert checkbox on error
+                document.getElementById('jsonLoggingEnabled').checked = !enabled;
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling JSON logging:', error);
+        showToast('Failed to toggle JSON logging', 'error');
+        // Revert checkbox on error
+        document.getElementById('jsonLoggingEnabled').checked = !enabled;
+    }
+}
+
+// Update card style based on enabled state
+function updateJSONCardStyle() {
+    const card = document.getElementById('jsonLoggingCard');
+    const enabledCheckbox = document.getElementById('jsonLoggingEnabled');
+    if (card && enabledCheckbox) {
+        const enabled = enabledCheckbox.checked;
+        if (enabled) {
+            card.style.borderColor = '#48bb78';
+            card.style.borderWidth = '2px';
+        } else {
+            card.style.borderColor = '#cbd5e0';
+            card.style.borderWidth = '2px';
+        }
+    }
+}
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Load JSON logging info immediately (this updates the status)
+    loadJsonLoggingInfo();
+    loadJsonLoggingSettings();
+    refreshLogEntries();
+    // Update card style after loading settings
+    setTimeout(updateJSONCardStyle, 100);
+    
+    // Initialize form change tracking (after settings load)
+    setTimeout(() => {
+        if (typeof formChangeTracker !== 'undefined') {
+            formChangeTracker.init('jsonLoggingForm', async function() {
+                // Custom save callback
+                document.getElementById('jsonLoggingForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }, 1000);
+        }
+    }, 500);
+});
+</script>
+
+{% endblock %}
+

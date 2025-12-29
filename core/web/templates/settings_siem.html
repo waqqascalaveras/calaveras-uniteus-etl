@@ -1,0 +1,259 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - SIEM Settings Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    SIEM settings configuration page for managing security information and
+    event management integration, logging, and syslog forwarding.
+================================================================================
+-->
+{% extends "base_minimal.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1" style="font-weight: 600; color: #1a202c;">
+                        <i class="fas fa-shield-alt me-2" style="color: #2c5282;"></i>SIEM Configuration
+                    </h2>
+                    <p class="text-muted mb-0" style="font-size: 14px;">Configure Security Information and Event Management integration</p>
+                </div>
+                <a href="/admincp" class="btn btn-outline-secondary" style="font-size: 14px;">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Admin CP
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- SIEM Settings Form -->
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-cog me-2" style="color: #2c5282;"></i>SIEM Settings
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 24px;">
+                    <form id="siemSettingsForm">
+                        <!-- Enable SIEM -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enabled" name="enabled" style="cursor: pointer;">
+                                <label class="form-check-label" for="enabled" style="font-weight: 500; font-size: 14px; color: #2d3748;">
+                                    Enable SIEM Integration
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size: 13px;">
+                                Enable centralized security event logging for enterprise monitoring
+                            </small>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- JSON Logging -->
+                        <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">JSON Event Logging</h6>
+                        <p class="text-muted mb-3" style="font-size: 13px;">
+                            Creates structured JSON log files that can be consumed by any SIEM system using 
+                            standard log forwarders like Filebeat, Fluentd, or Splunk Universal Forwarder.
+                        </p>
+
+                        <div class="mb-4">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">JSON Log Path</label>
+                            <input type="text" class="form-control" id="json_log_path" name="json_log_path" 
+                                   value="data/logs/siem_events.json" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            <small class="text-muted" style="font-size: 13px;">
+                                File path for JSON structured logs. Each event is written as a single JSON line.
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info" style="font-size: 13px;">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Privacy Protection:</strong> PHI and PII data is automatically redacted from logs for HIPAA compliance.
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary" style="background: #2c5282; border: none; font-size: 14px; padding: 10px 24px; font-weight: 500;">
+                                <i class="fas fa-save me-2"></i>Save Settings
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Panel -->
+        <div class="col-md-4">
+            <div class="card mb-3" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-info-circle me-2" style="color: #2c5282;"></i>About SIEM Logging
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 20px; font-size: 14px;">
+                    <p class="mb-3" style="color: #4a5568;">
+                        SIEM (Security Information and Event Management) logging captures all system 
+                        activity in a structured format for enterprise compliance and security monitoring.
+                    </p>
+                    
+                    <h6 style="font-weight: 600; font-size: 13px; color: #2d3748; margin-bottom: 8px;">JSON Format Benefits:</h6>
+                    <ul class="mb-3" style="font-size: 13px; color: #4a5568;">
+                        <li>Machine-readable structured data</li>
+                        <li>Easy to parse and analyze</li>
+                        <li>Universal SIEM compatibility</li>
+                        <li>One event per line (JSONL format)</li>
+                    </ul>
+
+                    <h6 style="font-weight: 600; font-size: 13px; color: #2d3748; margin-bottom: 8px;">Log Forwarders:</h6>
+                    <ul class="mb-3" style="font-size: 13px; color: #4a5568;">
+                        <li>Splunk Universal Forwarder</li>
+                        <li>Filebeat (Elastic)</li>
+                        <li>Fluentd</li>
+                        <li>NXLog</li>
+                    </ul>
+
+                    <h6 style="font-weight: 600; font-size: 13px; color: #2d3748; margin-bottom: 8px;">Logged Events:</h6>
+                    <ul style="font-size: 13px; color: #4a5568; margin-bottom: 0;">
+                        <li>Authentication & access</li>
+                        <li>ETL job execution</li>
+                        <li>Data exports & queries</li>
+                        <li>Configuration changes</li>
+                        <li>Errors & security events</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card" style="border: 1px solid #dcfce7; background: #f0fdf4; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-body" style="padding: 16px;">
+                    <div class="d-flex align-items-start">
+                        <i class="fas fa-check-circle fa-2x me-3" style="color: #16a34a;"></i>
+                        <div>
+                            <h6 class="mb-1" style="font-weight: 600; font-size: 13px; color: #15803d;">HIPAA Compliant</h6>
+                            <p class="mb-0" style="font-size: 12px; color: #166534;">
+                                PHI/PII is automatically redacted from all logs to maintain HIPAA compliance.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================================
+// Utility Functions for Notifications
+// ============================================================================
+
+function showSuccess(message) {
+    showNotification(message, 'success');
+}
+
+function showError(message) {
+    showNotification(message, 'danger');
+}
+
+function showInfo(message) {
+    showNotification(message, 'info');
+}
+
+function showWarning(message) {
+    showNotification(message, 'warning');
+}
+
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show`;
+    notification.style.position = 'fixed';
+    notification.style.top = '20px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '9999';
+    notification.style.minWidth = '300px';
+    notification.style.maxWidth = '500px';
+    notification.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+    
+    // Icon based on type
+    let icon = 'fa-info-circle';
+    if (type === 'success') icon = 'fa-check-circle';
+    if (type === 'danger') icon = 'fa-exclamation-circle';
+    if (type === 'warning') icon = 'fa-exclamation-triangle';
+    
+    notification.innerHTML = `
+        <i class="fas ${icon} me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 150);
+    }, 5000);
+}
+
+// ============================================================================
+// Settings Management Functions
+// ============================================================================
+
+// Load current settings
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings/siem');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            document.getElementById('enabled').checked = Boolean(settings.enabled);
+            document.getElementById('json_log_path').value = settings.json_log_path || 'data/logs/siem_events.json';
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showError('Failed to load SIEM settings');
+    }
+}
+
+// Save settings
+document.getElementById('siemSettingsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    
+    // Always enable JSON logging (it's the only option that works)
+    formData.set('enabled', document.getElementById('enabled').checked ? 'true' : 'false');
+    formData.set('enable_json_logging', 'true');  // Always true
+    formData.set('enable_windows_event_log', 'false');  // Not used
+    formData.set('syslog_enabled', 'false');  // Not used
+    formData.set('include_sensitive_data', 'false');  // Always false for HIPAA compliance
+    
+    try {
+        const response = await fetch('/api/settings/siem', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess('SIEM settings saved successfully! Events will be logged to ' + document.getElementById('json_log_path').value);
+        } else {
+            showError('Failed to save settings: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showError('Failed to save SIEM settings');
+    }
+});
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', loadSettings);
+</script>
+{% endblock %}
+

@@ -1,0 +1,122 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Settings Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Application settings page for configuring system preferences, database
+    connections, and general application settings.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2 class="mb-1" style="font-weight: 600; color: #1a202c;">
+                User Settings
+            </h2>
+            <p class="text-muted mb-0" style="font-size: 14px;">Manage your account settings and preferences</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Profile Settings -->
+        <div class="col-md-6 mb-4">
+            <div class="card" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-user me-2" style="color: #2c5282;"></i>Profile Information
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 24px;">
+                    <form id="profileForm">
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Username</label>
+                            <input type="text" class="form-control" value="{{ user.username }}" disabled style="background: #f7fafc; border: 1px solid #cbd5e0; font-size: 14px;">
+                            <small class="text-muted" style="font-size: 13px;">Username cannot be changed</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Display Name</label>
+                            <input type="text" class="form-control" id="displayName" value="{{ user.display_name or user.username }}" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Email</label>
+                            <input type="email" class="form-control" id="email" value="{{ user.email or '' }}" placeholder="user@example.com" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Role</label>
+                            <input type="text" class="form-control" value="{{ user.role.value|title }}" disabled style="background: #f7fafc; border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background: #2c5282; border: none; font-size: 14px; padding: 10px 20px; font-weight: 500;">
+                            <i class="fas fa-save me-2"></i>Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password Change -->
+        <div class="col-md-6 mb-4">
+            <div class="card" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-key me-2" style="color: #2c5282;"></i>Change Password
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 24px;">
+                    <form id="passwordForm">
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Current Password</label>
+                            <input type="password" class="form-control" id="currentPassword" required autocomplete="current-password" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">New Password</label>
+                            <input type="password" class="form-control" id="newPassword" required autocomplete="new-password" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            <small class="text-muted" style="font-size: 13px;">Minimum 8 characters</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" required autocomplete="new-password" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="background: #2c5282; border: none; font-size: 14px; padding: 10px 20px; font-weight: 500;">
+                            <i class="fas fa-lock me-2"></i>Update Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Profile form submission
+document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    showInfo('Profile update feature coming soon!');
+});
+
+// Password form submission
+document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showError('Passwords do not match!');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showError('Password must be at least 8 characters long!');
+        return;
+    }
+    
+    showInfo('Password change feature coming soon!');
+});
+</script>
+{% endblock %}

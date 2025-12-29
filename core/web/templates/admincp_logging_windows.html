@@ -1,0 +1,413 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Windows Event Log
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for configuring Windows Event Log integration.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'logging_windows' %}
+{% set page_title = 'Windows Event Log' %}
+{% set page_icon = 'windows' %}
+{% set page_description = 'Configure Windows Event Log integration for security event logging' %}
+
+{% block admin_content %}
+
+<!-- Windows Event Log Configuration Card -->
+<div class="card mb-4" id="windowsEventLogCard" style="border: 2px solid #cbd5e0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: border-color 0.3s;">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-cog me-2" style="color: #2c5282;"></i>Configuration
+            </h5>
+            <div class="d-flex align-items-center">
+                <label class="form-check-label me-2" for="windowsEventLogEnabled" style="font-weight: 500; font-size: 14px; color: #2d3748; margin: 0; cursor: pointer;">
+                    Enable Windows Event Log
+                </label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="windowsEventLogEnabled" style="width: 50px; height: 25px; cursor: pointer;" onchange="toggleWindowsEventLog();">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <form id="windowsEventLogForm">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                        <i class="fas fa-tag me-1"></i>Application Name
+                    </label>
+                    <input type="text" class="form-control" id="windowsEventLogAppName" value="UniteUsETL" style="font-size: 14px;">
+                    <small class="text-muted">Name shown in Windows Event Viewer</small>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Minimum Severity Level
+                    </label>
+                    <select class="form-select" id="windowsEventLogMinSeverity" style="font-size: 14px;">
+                        <option value="DEBUG">DEBUG (7) - All events</option>
+                        <option value="INFO">INFO (6) - Informational and above</option>
+                        <option value="NOTICE">NOTICE (5) - Notable events and above</option>
+                        <option value="WARNING">WARNING (4) - Warnings and above</option>
+                        <option value="ERROR" selected>ERROR (3) - Errors and above</option>
+                        <option value="CRITICAL">CRITICAL (2) - Critical and above</option>
+                        <option value="ALERT">ALERT (1) - Alerts and above</option>
+                        <option value="EMERGENCY">EMERGENCY (0) - Emergency only</option>
+                    </select>
+                    <small class="text-muted">Only log events at or above this severity</small>
+                </div>
+            </div>
+            
+            <div class="alert alert-info" style="background: #ebf8ff; border-color: #90cdf4; color: #2c5282;">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>About Windows Event Log:</strong> This is one of three SIEM logging backends (JSON files, Windows Event Log, and Syslog).
+                Events are logged to Windows Event Viewer under <strong>"Applications and Services Logs" → "UniteUsETL"</strong>.
+                <button class="btn btn-sm btn-outline-primary ms-2" onclick="openEventViewer()">
+                    <i class="fas fa-external-link-alt me-1"></i>Open Event Viewer
+                </button>
+            </div>
+            
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-secondary me-2" onclick="testWindowsEventLog()">
+                    <i class="fas fa-vial me-1"></i>Test Event Log
+                </button>
+                <!-- Save button hidden - using top/bottom save bars instead -->
+                <button type="submit" class="btn btn-primary" style="display: none;">
+                    <i class="fas fa-save me-1"></i>Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Event Log Viewer Card -->
+<div class="card mb-4" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-list me-2" style="color: #2c5282;"></i>View Events
+            </h5>
+            <div>
+                <button class="btn btn-sm btn-primary me-2" onclick="openEventViewer()">
+                    <i class="fas fa-external-link-alt me-1"></i>Open Event Viewer
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="refreshEventLog()">
+                    <i class="fas fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <div class="alert alert-info mb-3" style="background: #f0f9ff; border-color: #bae6fd; color: #0369a1;">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>How to view events:</strong> Click "Open Event Viewer" above, then navigate to:
+            <br><strong>Event Viewer (Local) → Applications and Services Logs → UniteUsETL</strong>
+            <br>Or press <kbd>Win+R</kbd>, type <code>eventvwr.msc</code>, then navigate to the same location.
+        </div>
+        <div id="recentEvents">
+            <p class="text-muted">Note: Direct event reading requires elevated permissions. Use Event Viewer for full access.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load current settings
+async function loadWindowsEventLogSettings() {
+    try {
+        const response = await fetch('/api/settings/siem');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            document.getElementById('windowsEventLogEnabled').checked = Boolean(settings.enable_windows_event_log);
+            
+            const minSeveritySelect = document.getElementById('windowsEventLogMinSeverity');
+            if (minSeveritySelect && settings.windows_event_log_min_severity) {
+                minSeveritySelect.value = settings.windows_event_log_min_severity;
+            }
+            
+            updateEnabledLabel();
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showToast('Failed to load settings', 'error');
+    }
+}
+
+function updateEnabledLabel() {
+    const enabled = document.getElementById('windowsEventLogEnabled').checked;
+    // Label is now in header, no need to update
+}
+
+// Toggle Windows Event Log with immediate save
+async function toggleWindowsEventLog() {
+    updateEnabledLabel();
+    updateWindowsCardStyle();
+    
+    const enabled = document.getElementById('windowsEventLogEnabled').checked;
+    const minSeverity = document.getElementById('windowsEventLogMinSeverity').value;
+    
+    try {
+        // Get current SIEM settings
+        const response = await fetch('/api/settings/siem');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            
+            // Build form data with updated toggle
+            const formData = new FormData();
+            formData.append('enabled', settings.enabled || false);
+            formData.append('enable_json_logging', settings.enable_json_logging || true);
+            formData.append('enable_windows_event_log', enabled);
+            formData.append('json_log_path', settings.json_log_path || 'data/logs/siem');
+            formData.append('syslog_enabled', settings.syslog_enabled || false);
+            formData.append('syslog_host', settings.syslog_host || 'localhost');
+            formData.append('syslog_port', settings.syslog_port || 514);
+            formData.append('syslog_protocol', settings.syslog_protocol || 'UDP');
+            formData.append('include_sensitive_data', settings.include_sensitive_data || false);
+            formData.append('json_log_min_severity', settings.json_log_min_severity || 'WARNING');
+            formData.append('windows_event_log_min_severity', minSeverity);
+            formData.append('syslog_min_severity', settings.syslog_min_severity || 'ERROR');
+            
+            // Save immediately
+            const saveResponse = await fetch('/api/settings/siem', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const saveData = await saveResponse.json();
+            
+            if (saveData.success) {
+                showToast(`Windows Event Log ${enabled ? 'enabled' : 'disabled'} successfully!`, 'success');
+                // Refresh windows pill if available
+                if (typeof window.refreshNavPill === 'function') {
+                    window.refreshNavPill('windows');
+                }
+            } else {
+                // Revert toggle on error
+                document.getElementById('windowsEventLogEnabled').checked = !enabled;
+                updateWindowsCardStyle();
+                showToast('Failed to save: ' + (saveData.error || 'Unknown error'), 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling Windows Event Log:', error);
+        // Revert toggle on error
+        document.getElementById('windowsEventLogEnabled').checked = !enabled;
+        updateWindowsCardStyle();
+        showToast('Failed to save settings', 'error');
+    }
+}
+
+function updateWindowsCardStyle() {
+    const card = document.getElementById('windowsEventLogCard');
+    const enabledCheckbox = document.getElementById('windowsEventLogEnabled');
+    if (card && enabledCheckbox) {
+        const enabled = enabledCheckbox.checked;
+        if (enabled) {
+            card.style.borderColor = '#48bb78';
+            card.style.borderWidth = '2px';
+        } else {
+            card.style.borderColor = '#cbd5e0';
+            card.style.borderWidth = '2px';
+        }
+    }
+}
+
+document.getElementById('windowsEventLogEnabled').addEventListener('change', updateEnabledLabel);
+
+// Save settings
+document.getElementById('windowsEventLogForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const enabled = document.getElementById('windowsEventLogEnabled').checked;
+    const appName = document.getElementById('windowsEventLogAppName').value;
+    
+    // Get current SIEM settings and update Windows Event Log setting
+    try {
+        const response = await fetch('/api/settings/siem');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            settings.enable_windows_event_log = enabled;
+            
+            // Save updated settings
+            const formData = new FormData();
+            formData.append('enabled', settings.enabled || false);
+            formData.append('enable_json_logging', settings.enable_json_logging || true);
+            formData.append('enable_windows_event_log', enabled);
+            formData.append('json_log_path', settings.json_log_path || 'data/logs/siem_events.json');
+            formData.append('syslog_enabled', settings.syslog_enabled || false);
+            formData.append('syslog_host', settings.syslog_host || 'localhost');
+            formData.append('syslog_port', settings.syslog_port || 514);
+            formData.append('syslog_protocol', settings.syslog_protocol || 'UDP');
+            formData.append('include_sensitive_data', settings.include_sensitive_data || false);
+            
+            const saveResponse = await fetch('/api/settings/siem', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const saveData = await saveResponse.json();
+            
+            if (saveData.success) {
+                showToast('Windows Event Log settings saved successfully!', 'success');
+                await loadWindowsEventLogSettings();
+                // Mark form as saved
+                if (typeof formChangeTracker !== 'undefined') {
+                    formChangeTracker.markSaved('windowsEventLogForm');
+                }
+                // Refresh windows pill
+                if (typeof window.refreshNavPill === 'function') {
+                    window.refreshNavPill('windows');
+                }
+                updateWindowsCardStyle();
+            } else {
+                showToast('Failed to save settings: ' + (saveData.error || 'Unknown error'), 'error');
+            }
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showToast('Failed to save settings', 'error');
+    }
+});
+
+// Test Windows Event Log
+async function testWindowsEventLog() {
+    try {
+        const response = await fetch('/api/admin/logging/windows/test', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Test event logged successfully! <a href="#" onclick="openEventViewer(); return false;" style="color: inherit; text-decoration: underline;">Open Event Viewer</a> to view it.', 'success');
+            setTimeout(refreshEventLog, 1000);
+        } else {
+            showToast('Failed to log test event: ' + (data.error || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error testing Windows Event Log:', error);
+        showToast('Failed to test Windows Event Log', 'error');
+    }
+}
+
+// Refresh event log
+async function refreshEventLog() {
+    const eventsDiv = document.getElementById('recentEvents');
+    eventsDiv.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading recent events...</p>';
+    
+    try {
+        const response = await fetch('/api/admin/logging/windows/events?limit=20');
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.events && data.events.length > 0) {
+                let html = '<div class="table-responsive"><table class="table table-sm table-hover">';
+                html += '<thead class="table-light"><tr><th style="width: 180px;">Time</th><th style="width: 100px;">Type</th><th>Message</th></tr></thead><tbody>';
+                
+                data.events.forEach(event => {
+                    const typeColor = event.type === 'Error' ? 'danger' : event.type === 'Warning' ? 'warning' : 'info';
+                    const icon = event.type === 'Error' ? 'exclamation-circle' : event.type === 'Warning' ? 'exclamation-triangle' : 'info-circle';
+                    
+                    html += `<tr>
+                        <td style="font-size: 12px;">${event.time || 'N/A'}</td>
+                        <td><span class="badge bg-${typeColor}"><i class="fas fa-${icon} me-1"></i>${event.type || 'Information'}</span></td>
+                        <td style="font-size: 13px;">${escapeHtml(event.message || 'N/A')}</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                html += `<p class="text-muted mt-2" style="font-size: 12px;"><i class="fas fa-info-circle me-1"></i>Showing ${data.count || data.events.length} most recent events</p>`;
+                eventsDiv.innerHTML = html;
+            } else {
+                let message = '<p class="text-muted">No recent events found.';
+                if (data.message) {
+                    message += `<br><small>${data.message}</small>`;
+                } else {
+                    message += ' Try logging a test event using the "Test Event Log" button above.</p>';
+                }
+                message += '</p>';
+                eventsDiv.innerHTML = message;
+            }
+        } else {
+            eventsDiv.innerHTML = `<p class="text-danger">Unable to load events: ${data.error || 'Unknown error'}</p>`;
+        }
+    } catch (error) {
+        console.error('Error refreshing event log:', error);
+        eventsDiv.innerHTML = `<p class="text-danger">Error loading events: ${error.message}</p>`;
+    }
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Open Windows Event Viewer
+function openEventViewer() {
+    // Try to open Event Viewer directly to the Applications and Services Logs
+    // Using eventvwr.msc with a specific path
+    fetch('/api/admin/logging/windows/open-viewer', {
+        method: 'POST'
+    }).then(response => response.json()).then(data => {
+        if (data.success) {
+            showToast('Opening Windows Event Viewer...', 'success');
+        } else {
+            showToast('Could not open Event Viewer automatically. Please open it manually: Press Win+R, type "eventvwr.msc", then navigate to Applications and Services Logs → UniteUsETL', 'info');
+        }
+    }).catch(error => {
+        // Fallback instructions
+        showToast('To view events: Press Win+R, type "eventvwr.msc", then navigate to Applications and Services Logs → UniteUsETL', 'info');
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    // Simple toast implementation
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}`;
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.style.minWidth = '300px';
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadWindowsEventLogSettings();
+    refreshEventLog();
+    // Update card style after loading settings
+    setTimeout(updateWindowsCardStyle, 100);
+    
+    // Initialize form change tracking (after settings load)
+    setTimeout(() => {
+        if (typeof formChangeTracker !== 'undefined') {
+            formChangeTracker.init('windowsEventLogForm', async function() {
+                // Custom save callback
+                document.getElementById('windowsEventLogForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }, 1000);
+        }
+    }, 500);
+});
+</script>
+
+{% endblock %}
+

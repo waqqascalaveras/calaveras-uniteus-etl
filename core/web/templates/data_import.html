@@ -1,0 +1,2998 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Data Import Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Data import interface for uploading and processing data files through
+    the ETL pipeline with job monitoring and progress tracking.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-upload me-2"></i>Data Import
+        </h1>
+    </div>
+</div>
+
+<!-- Automated Sync Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card" id="autoSyncCard" style="border: 2px solid #e2e8f0; transition: all 0.3s ease;">
+            <div class="card-body" style="padding: 24px;">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="mb-2" style="font-weight: 600; color: #2d3748;">
+                            <i class="fas fa-sync-alt me-2" style="color: #667eea;"></i>Automated Sync
+                        </h5>
+                        <p class="text-muted mb-0" style="font-size: 14px;">
+                            Automatically sync files from SFTP and run ETL jobs at regular intervals
+                        </p>
+                    </div>
+                    <div class="form-check form-switch" style="padding-left: 0;">
+                        <input class="form-check-input" type="checkbox" id="autoSyncEnabled" 
+                               style="width: 60px; height: 30px; cursor: pointer; margin-left: 0;">
+                    </div>
+                </div>
+                
+                <div id="autoSyncIntervalSection" style="display: none; animation: fadeIn 0.3s ease;">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="autoSyncInterval" class="form-label" style="font-weight: 600; font-size: 14px; color: #2d3748;">
+                                <i class="fas fa-clock me-1" style="color: #667eea;"></i>Sync Interval
+                            </label>
+                            <select class="form-select" id="autoSyncInterval" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                                <option value="15">Every 15 minutes</option>
+                                <option value="30">Every 30 minutes</option>
+                                <option value="60" selected>Every hour</option>
+                                <option value="120">Every 2 hours</option>
+                                <option value="240">Every 4 hours</option>
+                                <option value="480">Every 8 hours</option>
+                                <option value="720">Every 12 hours</option>
+                                <option value="1440">Every 24 hours</option>
+                                <option value="10080">Every week</option>
+                                <option value="20160">Every 2 weeks</option>
+                                <option value="43200">Every month</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label" style="font-weight: 600; font-size: 14px; color: #2d3748;">
+                                <i class="fas fa-chart-line me-1" style="color: #667eea;"></i>Statistics
+                            </label>
+                            <div class="d-flex gap-3">
+                                <div class="flex-fill">
+                                    <div class="text-muted small">Last Run</div>
+                                    <div id="autoSyncLastRun" class="fw-bold" style="font-size: 13px;">Never</div>
+                                </div>
+                                <div class="flex-fill">
+                                    <div class="text-muted small">Next Run</div>
+                                    <div id="autoSyncNextRun" class="fw-bold" style="font-size: 13px;">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 pt-3" style="border-top: 1px solid #e2e8f0;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted small">
+                                <i class="fas fa-user me-1"></i>Last updated by: <span id="autoSyncUpdatedBy" class="fw-bold">-</span>
+                            </div>
+                            <button id="saveAutoSyncBtn" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                <i class="fas fa-save me-1"></i>Save Configuration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#autoSyncCard.disabled {
+    background: #f7fafc;
+    border-color: #cbd5e0 !important;
+}
+
+#autoSyncCard.disabled h5,
+#autoSyncCard.disabled .fa-sync-alt,
+#autoSyncCard.disabled .fa-clock,
+#autoSyncCard.disabled .fa-chart-line,
+#autoSyncCard.disabled label {
+    color: #a0aec0 !important;
+}
+
+#autoSyncCard.enabled {
+    background: linear-gradient(to bottom, #ffffff 0%, #f8f9ff 100%);
+    border-color: #667eea !important;
+    box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.1), 0 2px 4px -1px rgba(102, 126, 234, 0.06);
+}
+
+#autoSyncEnabled:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+</style>
+
+<!-- Import Status -->
+<div class="row mb-4" id="importStatusSection" style="display: none;">
+    <div class="col-12">
+        <div class="alert alert-info" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div>
+                    <strong>ETL Job Running</strong><br>
+                    <small id="importStatusText">Processing data files...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Unified Files Section (Local + Remote SFTP) -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">
+                            <i class="fas fa-database me-2"></i>Data Files
+                        </h5>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <!-- Refresh using SFTP Button -->
+                <button id="refreshUsingSftpBtn" class="btn btn-success btn-sm">
+                    <i class="fas fa-sync me-1"></i>Sync from SFTP
+                </button>
+                <span id="lastSyncTime" class="text-muted ms-2" style="display: none;">
+                    <small>Last synced: <span id="lastSyncTimeValue">Never</span></small>
+                </span>
+                        <!-- SFTP Settings Link -->
+                        <a href="/admincp/sftp" class="btn btn-outline-light btn-sm" title="SFTP Settings">
+                            <i class="fas fa-cog"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Quick Stats Bar -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-folder-open fa-2x text-primary me-3"></i>
+                            <div>
+                                <small class="text-muted d-block">Total Files</small>
+                                <h5 class="mb-0" id="total_files_count">0</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-hdd fa-2x text-success me-3"></i>
+                            <div>
+                                <small class="text-muted d-block">Local</small>
+                                <h5 class="mb-0" id="local_files_count">0</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-cloud fa-2x text-info me-3"></i>
+                            <div>
+                                <small class="text-muted d-block">On SFTP</small>
+                                <h5 class="mb-0" id="remote_files_count">0</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-double fa-2x text-success me-3"></i>
+                            <div>
+                                <small class="text-muted d-block">In Both</small>
+                                <h5 class="mb-0" id="both_files_count">0</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-check-circle fa-2x text-warning me-3"></i>
+                            <div>
+                                <small class="text-muted d-block">Processed</small>
+                                <h5 class="mb-0" id="processed_files_count">0</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="filesLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                
+                <div id="filesContent" class="d-none">
+                    <!-- Files will be grouped by date here -->
+                    <div id="filesByDate"></div>
+                    
+                    <div class="mt-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted" id="fileCount">0 files found</span>
+                            <span class="text-success ms-3" id="selectedCount">0 selected for processing</span>
+                        </div>
+                        <div>
+                            <button id="selectAllBtn" class="btn btn-outline-secondary btn-sm me-2">
+                                <i class="fas fa-check-square me-1"></i>Select All
+                            </button>
+                            <button id="selectNoneBtn" class="btn btn-outline-secondary btn-sm me-2">
+                                <i class="fas fa-square me-1"></i>Deselect All
+                            </button>
+                            <button id="selectNewBtn" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-magic me-1"></i>Select Unprocessed Only
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="noFiles" class="text-center text-muted py-3 d-none">
+                    <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i>
+                    <p class="mb-0">No data files found in temp_data_files directory</p>
+                    <small class="text-muted">Place your UniteUs export files in the temp_data_files folder</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ETL Configuration Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-cogs me-1"></i>ETL Job Configuration
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="downloadFromSftp" checked>
+                                <label class="form-check-label" for="downloadFromSftp">
+                                    <i class="fas fa-cloud-download-alt me-1"></i>Download files from SFTP
+                                </label>
+                                <div class="form-text">If unchecked, only local files will be processed</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="forceReprocess">
+                                <label class="form-check-label" for="forceReprocess">
+                                    <i class="fas fa-redo me-1"></i>Force Reprocess Selected Files
+                                </label>
+                                <div class="form-text">Reprocess the selected files even if they have been processed before</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                    <button id="startETLBtn" class="btn btn-success btn-lg">
+                        <i class="fas fa-play me-2"></i>Start ETL Job
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-1"></i>Recent Import History
+                </h6>
+                <span class="badge bg-primary" id="activeJobsCount" style="display: none;">0 Active</span>
+            </div>
+            <div class="card-body">
+                <div id="historyLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                
+                <div id="historyContent" class="d-none">
+                    <div id="jobCardsContainer">
+                        <!-- Enhanced job cards will be inserted here -->
+                    </div>
+                </div>
+                
+                <div id="historyEmpty" class="text-center text-muted py-3 d-none">
+                    <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                    <p class="mb-0">No import history available</p>
+                    <small class="text-muted">No import history available. Start a new ETL job to see it appear here.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Cleaning Info -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-primary">
+            <i class="fas fa-book-open me-2"></i>
+            <strong>New to data cleaning?</strong> Learn about our automated data cleaning process: 
+            <a href="/data-cleaning" class="alert-link">View Data Cleaning Documentation</a>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Styles for Enhanced Job Cards -->
+<style>
+.job-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.job-card.job-running {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.1);
+}
+
+.job-card.job-completed {
+    border-color: #198754;
+}
+
+.job-card.job-failed {
+    border-color: #dc3545;
+}
+
+.job-card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 0.65rem 0.85rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+.job-card-header:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+}
+
+.job-card.job-running .job-card-header {
+    background: linear-gradient(135deg, #cfe2ff 0%, #e7f1ff 100%);
+}
+
+.job-card-body {
+    padding: 0.75rem 0.85rem;
+    background: #fff;
+}
+
+.progress-bar-animated-smooth {
+    animation: progress-bar-stripes 1.5s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+    0% { background-position: 1rem 0; }
+    100% { background-position: 0 0; }
+}
+
+.job-status-badge {
+    font-size: 0.875rem;
+    padding: 0.35rem 0.75rem;
+}
+
+.file-list-compact {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.file-item {
+    padding: 0.35rem 0.5rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.2s ease;
+}
+
+.file-item:hover {
+    background: #f8f9fa;
+}
+
+.file-item:last-child {
+    border-bottom: none;
+}
+
+.metric-card {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 0.5rem;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #0d6efd;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+}
+
+.collapse-icon {
+    transition: transform 0.3s ease;
+}
+
+.collapse-icon.rotated {
+    transform: rotate(90deg);
+}
+
+/* Fade in animation for new jobs */
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.job-card.new-job {
+    animation: fadeInSlide 0.5s ease-out;
+}
+
+/* Minimum progress bar width for visibility */
+.progress-bar-minimum {
+    min-width: 3%;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentETLJob = null;
+let progressInterval = null;
+let allFiles = [];
+let processedFiles = new Set();
+
+// Toast notification functions
+function showSuccess(message) {
+    showToast(message, 'success');
+}
+
+function showError(message) {
+    showToast(message, 'danger');
+}
+
+function showInfo(message) {
+    showToast(message, 'info');
+}
+
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+    const toastId = 'toast-' + Date.now();
+    
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-white bg-${type} border-0`;
+    toast.id = toastId;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+    bsToast.show();
+    
+    // Remove toast element after it's hidden
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+    return container;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAutoSyncConfig();
+    loadFiles();
+    loadHistory();
+    checkETLStatus();
+    
+    // Load cached SFTP data
+    if (typeof loadCachedSftpData === 'function') {
+        loadCachedSftpData();
+    }
+    
+    // Event listeners
+    document.getElementById('selectAllBtn').addEventListener('click', selectAllFiles);
+    document.getElementById('selectNoneBtn').addEventListener('click', selectNoFiles);
+    document.getElementById('selectNewBtn').addEventListener('click', selectUnprocessedFiles);
+    document.getElementById('startETLBtn').addEventListener('click', startETLJob);
+    
+    // Automated sync event listeners
+    document.getElementById('autoSyncEnabled').addEventListener('change', function() {
+        const autoSyncCard = document.getElementById('autoSyncCard');
+        const intervalSection = document.getElementById('autoSyncIntervalSection');
+        
+        if (this.checked) {
+            autoSyncCard.classList.remove('disabled');
+            autoSyncCard.classList.add('enabled');
+            intervalSection.style.display = 'block';
+        } else {
+            autoSyncCard.classList.remove('enabled');
+            autoSyncCard.classList.add('disabled');
+            intervalSection.style.display = 'none';
+        }
+    });
+    
+    document.getElementById('saveAutoSyncBtn').addEventListener('click', saveAutoSyncConfig);
+});
+
+function extractDateFromFilename(filename, lastModified = null) {
+    // Extract date pattern YYYYMMDD from filename
+    const match = filename.match(/(\d{8})/);
+    if (match) {
+        const dateStr = match[1];
+        const year = parseInt(dateStr.substring(0, 4));
+        const month = parseInt(dateStr.substring(4, 6));
+        const day = parseInt(dateStr.substring(6, 8));
+        
+        // Validate the date
+        const date = new Date(year, month - 1, day);
+        if (date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day) {
+            return date.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        }
+    }
+    
+    // If no valid date in filename, use last modified date if available
+    if (lastModified) {
+        return new Date(lastModified).toISOString().split('T')[0];
+    }
+    
+    return null; // Return null instead of 'Unknown Date' for better handling
+}
+
+function getFileType(filename) {
+    // Extract table name from filename
+    const patterns = [
+        { pattern: /people/i, type: 'people' },
+        { pattern: /employee/i, type: 'employees' },
+        { pattern: /case/i, type: 'cases' },
+        { pattern: /referral/i, type: 'referrals' },
+        { pattern: /assistance.*request/i, type: 'assistance_requests' },
+        { pattern: /resource.*list.*share/i, type: 'resource_list_shares' },
+        { pattern: /resource.*list/i, type: 'resource_lists' }
+    ];
+    
+    for (const {pattern, type} of patterns) {
+        if (pattern.test(filename)) {
+            return type;
+        }
+    }
+    return 'other';
+}
+
+async function loadFiles() {
+    const loadingDiv = document.getElementById('filesLoading');
+    const contentDiv = document.getElementById('filesContent');
+    const noFilesDiv = document.getElementById('noFiles');
+    
+    try {
+        loadingDiv.classList.remove('d-none');
+        contentDiv.classList.add('d-none');
+        noFilesDiv.classList.add('d-none');
+        
+        // Load local files from directory
+        const filesResponse = await fetch('/api/files/list');
+        
+        if (!filesResponse.ok) {
+            throw new Error(`Failed to fetch files list: ${filesResponse.status} ${filesResponse.statusText}`);
+        }
+        
+        const filesData = await filesResponse.json();
+        
+        // Build map of local files by filename
+        const localFilesMap = new Map();
+        if (filesData.files && filesData.files.length > 0) {
+            filesData.files.forEach(file => {
+                localFilesMap.set(file.name, file);
+            });
+        }
+        
+        // Load processing history to know which files have been processed
+        console.log('[loadFiles] Fetching /api/etl/processing-history...');
+        const historyResponse = await fetch('/api/etl/processing-history?limit=1000');
+        console.log('[loadFiles] historyResponse status:', historyResponse.status);
+        
+        if (!historyResponse.ok) {
+            throw new Error(`Failed to fetch processing history: ${historyResponse.status} ${historyResponse.statusText}`);
+        }
+        
+        const historyData = await historyResponse.json();
+        // Build map of processed file hashes (file_name -> file_hash)
+        const processedFileHashes = new Map();
+        if (historyData.success && historyData.data) {
+            historyData.data.forEach(record => {
+                if (record.file_name && record.file_hash) {
+                    // Check if status indicates successful processing (completed, success, or processed)
+                    const successStatuses = ['completed', 'success', 'processed'];
+                    if (record.status && successStatuses.includes(record.status.toLowerCase())) {
+                        // Store the hash for this filename
+                        processedFileHashes.set(record.file_name, record.file_hash);
+                    }
+                }
+            });
+        }
+        
+        // Merge SFTP files with local files
+        const mergedFiles = [];
+        
+        // Add all local files
+        if (filesData.files && filesData.files.length > 0) {
+            filesData.files.forEach(file => {
+                const processedHash = processedFileHashes.get(file.name);
+                const isProcessed = processedHash && processedHash === file.hash;
+                
+                // Find ETL record count for this file
+                let etlRecords = 0;
+                if (isProcessed && historyData.data) {
+                    const etlRecord = historyData.data.find(r => r.file_hash === file.hash && r.file_name === file.name);
+                    if (etlRecord && etlRecord.total_records) {
+                        etlRecords = etlRecord.total_records;
+                    }
+                }
+                
+                mergedFiles.push({
+                    ...file,
+                    date: extractDateFromFilename(file.name, file.modified),
+                    type: getFileType(file.name),
+                    isProcessed: isProcessed,
+                    etlRecords: etlRecords,
+                    location: 'local',
+                    isLocal: true,
+                    isRemote: false
+                });
+            });
+        }
+        
+        // Add SFTP files (if connected)
+        if (sftpConnected && sftpFiles && sftpFiles.length > 0) {
+            sftpFiles.forEach(sftpFile => {
+                const filename = sftpFile.filename;
+                const localFile = localFilesMap.get(filename);
+                
+                if (localFile) {
+                    // File exists in both places - update the local file entry
+                    const localEntry = mergedFiles.find(f => f.name === filename);
+                    if (localEntry) {
+                        localEntry.location = 'both';
+                        localEntry.isRemote = true;
+                        localEntry.remotePath = sftpFile.remote_path;
+                        localEntry.remoteSize = sftpFile.size;
+                        localEntry.remoteModified = sftpFile.modified_time;
+                    }
+                } else {
+                    // File only exists on SFTP - add as remote-only
+                    mergedFiles.push({
+                        name: filename,
+                        size: sftpFile.size,
+                        modified: sftpFile.modified_time,
+                        date: extractDateFromFilename(filename, sftpFile.modified_time),
+                        type: getFileType(filename),
+                        isProcessed: false,
+                        location: 'remote',
+                        isLocal: false,
+                        isRemote: true,
+                        remotePath: sftpFile.remote_path
+                    });
+                }
+            });
+        }
+        
+        loadingDiv.classList.add('d-none');
+        
+        if (mergedFiles.length > 0) {
+            console.log('[loadFiles] Displaying', mergedFiles.length, 'merged files...');
+            allFiles = mergedFiles;
+            
+            // Update stats BEFORE displaying
+            console.log('[loadFiles] Updating file stats...');
+            updateFileStats(allFiles);
+            
+            displayFilesByDate(allFiles);
+            contentDiv.classList.remove('d-none');
+            console.log('[loadFiles] Files displayed successfully');
+            
+            // Auto-select unprocessed local files
+            selectUnprocessedFiles();
+        } else {
+            noFilesDiv.classList.remove('d-none');
+            
+            // Update stats even if no files
+            updateFileStats([]);
+        }
+        
+    } catch (error) {
+        console.error('[loadFiles] ERROR:', error);
+        console.error('[loadFiles] Error stack:', error.stack);
+        loadingDiv.classList.add('d-none');
+        noFilesDiv.classList.remove('d-none');
+    }
+}
+
+function displayFilesByDate(files) {
+    // Group files by date
+    const filesByDate = {};
+    files.forEach(file => {
+        const dateKey = file.date || 'No Date Found';
+        if (!filesByDate[dateKey]) {
+            filesByDate[dateKey] = [];
+        }
+        filesByDate[dateKey].push(file);
+    });
+    
+    // Sort dates descending (newest first)
+    const sortedDates = Object.keys(filesByDate).sort((a, b) => {
+        if (a === 'No Date Found') return 1;
+        if (b === 'No Date Found') return -1;
+        return b.localeCompare(a);
+    });
+    
+    const container = document.getElementById('filesByDate');
+    container.innerHTML = '';
+    
+    sortedDates.forEach(date => {
+        const filesInDate = filesByDate[date];
+        
+        // Format date properly to avoid timezone issues
+        let dateFormatted;
+        if (date === 'No Date Found') {
+            dateFormatted = `${date} (using file modified date)`;
+        } else {
+            // Parse YYYY-MM-DD manually to avoid timezone shifts
+            const [year, month, day] = date.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, day);
+            dateFormatted = dateObj.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+        
+        const unprocessedCount = filesInDate.filter(f => !f.isProcessed).length;
+        const totalCount = filesInDate.length;
+        
+        // Determine if this date group should be collapsed (all files processed)
+        const shouldCollapse = unprocessedCount === 0;
+        const collapseId = `collapse-${date.replace(/[^a-zA-Z0-9]/g, '')}`;
+        
+        const dateGroup = document.createElement('div');
+        dateGroup.className = 'mb-3';
+        dateGroup.innerHTML = `
+            <div class="card">
+                <div class="card-header py-2 ${shouldCollapse ? 'bg-light' : 'bg-white'}" 
+                     style="cursor: pointer;" 
+                     data-bs-toggle="collapse" 
+                     data-bs-target="#${collapseId}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chevron-${shouldCollapse ? 'right' : 'down'} me-2 collapse-icon" id="icon-${collapseId}"></i>
+                            <i class="fas fa-calendar me-2"></i>${dateFormatted}
+                            <span class="badge bg-secondary ms-2">${totalCount} files</span>
+                            ${unprocessedCount > 0 ? `<span class="badge bg-warning text-dark ms-2">${unprocessedCount} new</span>` : '<span class="badge bg-success ms-2"><i class="fas fa-check"></i> All processed</span>'}
+                        </h6>
+                    </div>
+                </div>
+                <div id="${collapseId}" class="collapse ${shouldCollapse ? '' : 'show'}">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th width="50"><input type="checkbox" class="form-check-input date-select-all" data-date="${date}"></th>
+                                        <th>File Name</th>
+                                        <th width="100">Size</th>
+                                        <th width="160">Modified</th>
+                                        <th width="300" class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="files-${date.replace(/[^a-zA-Z0-9]/g, '')}">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(dateGroup);
+        
+        const tbody = dateGroup.querySelector('tbody');
+        filesInDate.forEach(file => {
+            const row = tbody.insertRow();
+            const isProcessed = file.isProcessed;
+            const isLocal = file.isLocal || file.location === 'local' || file.location === 'both';
+            const isRemote = file.isRemote || file.location === 'remote' || file.location === 'both';
+            
+            // Combined Status column with ETL progress support
+            // SFTP badge
+            const sftpBadge = isRemote 
+                ? `<span class="badge bg-info" title="Available on SFTP"><i class="fas fa-cloud me-1"></i>SFTP</span>`
+                : `<span class="badge bg-secondary" style="opacity: 0.25;" title="Not on SFTP"><i class="fas fa-cloud me-1"></i>SFTP</span>`;
+            
+            // Local badge
+            const localBadge = isLocal
+                ? `<span class="badge bg-success" title="Available locally"><i class="fas fa-hdd me-1"></i>Local</span>`
+                : `<span class="badge bg-secondary" style="opacity: 0.25;" title="Not downloaded"><i class="fas fa-hdd me-1"></i>Local</span>`;
+            
+            // Processed badge with record count
+            let processedBadge;
+            let etlDetails = '';
+            
+            if (file.etlRecords && file.etlRecords > 0) {
+                // Show record count if available
+                processedBadge = `<span class="badge bg-primary" title="ETL completed"><i class="fas fa-check-circle me-1"></i>Processed</span>`;
+                etlDetails = `<div class="text-muted small mt-1"><i class="fas fa-database me-1"></i>${file.etlRecords.toLocaleString()} records</div>`;
+            } else if (isProcessed) {
+                processedBadge = `<span class="badge bg-primary" title="ETL completed"><i class="fas fa-check-circle me-1"></i>Processed</span>`;
+            } else {
+                processedBadge = `<span class="badge bg-secondary" style="opacity: 0.25;" title="Not processed"><i class="fas fa-check-circle me-1"></i>Processed</span>`;
+            }
+            
+            const statusBadges = `
+                <div class="file-status-cell" data-filename="${file.name}">
+                    <div class="d-flex align-items-center justify-content-center gap-1 mb-1">
+                        ${sftpBadge}
+                        ${localBadge}
+                        ${processedBadge}
+                    </div>
+                    <div class="etl-progress-container" style="display: none;">
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                 role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small class="text-muted etl-progress-text">Processing...</small>
+                    </div>
+                    ${etlDetails}
+                </div>
+            `;
+            
+            row.innerHTML = `
+                <td>
+                    ${isLocal ? `
+                        <input type="checkbox" class="form-check-input file-checkbox" 
+                               data-filename="${file.name}" 
+                               data-date="${date}"
+                               ${!isProcessed ? 'checked' : ''}>
+                    ` : ''}
+                </td>
+                <td>
+                    <div class="text-truncate" style="max-width: 400px;" title="${file.name}">
+                        <i class="${getFileIcon(file.name)} me-1"></i>
+                        ${file.name}
+                    </div>
+                </td>
+                <td>${formatFileSize(file.size)}</td>
+                <td><small>${new Date(file.modified).toLocaleString()}</small></td>
+                <td class="text-center">${statusBadges}</td>
+            `;
+            
+            // Store filename on row for easy lookup
+            row.dataset.filename = file.name;
+            row.dataset.fileHash = file.hash || '';
+        });
+        
+        // Add event listener to date-level select all checkbox
+        const dateSelectAll = dateGroup.querySelector('.date-select-all');
+        dateSelectAll.addEventListener('change', function() {
+            const checkboxes = dateGroup.querySelectorAll('.file-checkbox');
+            checkboxes.forEach(cb => cb.checked = this.checked);
+            updateSelectedCount();
+        });
+        
+        // Add event listener to toggle chevron icon on collapse/expand
+        const collapseElement = dateGroup.querySelector(`#${collapseId}`);
+        const iconElement = dateGroup.querySelector(`#icon-${collapseId}`);
+        
+        collapseElement.addEventListener('show.bs.collapse', function() {
+            iconElement.classList.remove('fa-chevron-right');
+            iconElement.classList.add('fa-chevron-down');
+        });
+        
+        collapseElement.addEventListener('hide.bs.collapse', function() {
+            iconElement.classList.remove('fa-chevron-down');
+            iconElement.classList.add('fa-chevron-right');
+        });
+    });
+    
+    // Add event listeners to all file checkboxes
+    document.querySelectorAll('.file-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+    
+    updateFileCount();
+    updateSelectedCount();
+}
+
+function getFileIcon(filename) {
+    if (filename.includes('people')) return 'fas fa-users text-primary';
+    if (filename.includes('employee')) return 'fas fa-user-tie text-info';
+    if (filename.includes('case')) return 'fas fa-briefcase text-success';
+    if (filename.includes('referral')) return 'fas fa-exchange-alt text-warning';
+    if (filename.includes('assistance')) return 'fas fa-hands-helping text-danger';
+    if (filename.includes('resource')) return 'fas fa-list text-secondary';
+    return 'fas fa-file text-muted';
+}
+
+function selectAllFiles() {
+    document.querySelectorAll('.file-checkbox').forEach(cb => cb.checked = true);
+    updateSelectedCount();
+}
+
+function selectNoFiles() {
+    document.querySelectorAll('.file-checkbox').forEach(cb => cb.checked = false);
+    updateSelectedCount();
+}
+
+function selectUnprocessedFiles() {
+    document.querySelectorAll('.file-checkbox').forEach(cb => {
+        const filename = cb.dataset.filename;
+        const file = allFiles.find(f => f.name === filename);
+        cb.checked = file && !file.isProcessed;
+    });
+    updateSelectedCount();
+}
+
+function updateFileCount() {
+    const total = allFiles.length;
+    const unprocessed = allFiles.filter(f => !f.isProcessed).length;
+    document.getElementById('fileCount').textContent = 
+        `${total} files found (${unprocessed} unprocessed)`;
+}
+
+function updateSelectedCount() {
+    const selected = document.querySelectorAll('.file-checkbox:checked').length;
+    document.getElementById('selectedCount').textContent = 
+        `${selected} selected for processing`;
+}
+
+async function checkETLStatus() {
+    // This function is now mainly used to check if a job is running on page load
+    // The actual display is handled by loadHistory()
+    try {
+        const response = await fetch('/api/etl/status');
+        const data = await response.json();
+        
+        const statusSection = document.getElementById('importStatusSection');
+        const statusText = document.getElementById('importStatusText');
+        
+        if (data.current_job && data.current_job.is_running) {
+            // Job is actively running - show status banner and start progress tracking
+            currentETLJob = data.current_job;
+            const job = data.current_job;
+            
+            // Update status banner
+            statusText.innerHTML = `
+                Processing ${job.files_processed} of ${job.total_files} files... 
+                (${(job.total_records || 0).toLocaleString()} records processed)
+            `;
+            statusSection.style.display = 'block';
+            
+            if (!progressInterval) {
+                startProgressTracking();
+            }
+        } else {
+            // No active job - hide status banner and stop tracking
+            currentETLJob = null;
+            statusSection.style.display = 'none';
+            stopProgressTracking();
+        }
+        
+    } catch (error) {
+        console.error('Error checking ETL status:', error);
+    }
+}
+
+async function startETLJob() {
+    const forceReprocess = document.getElementById('forceReprocess').checked;
+    const downloadFromSftp = document.getElementById('downloadFromSftp').checked;
+    const maxWorkers = 2; // Use 2 workers by default to avoid overwhelming system with large files
+    
+    // Get selected files
+    const selectedCheckboxes = document.querySelectorAll('.file-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        showError('Please select at least one file to process');
+        return;
+    }
+    
+    const selectedFiles = Array.from(selectedCheckboxes).map(cb => cb.dataset.filename);
+    
+    // Disable the start button to prevent double-clicks
+    const startBtn = document.getElementById('startETLBtn');
+    const originalHTML = startBtn.innerHTML;
+    startBtn.disabled = true;
+    startBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting...';
+    
+    try {
+        // Step 1: Download from SFTP if requested
+        let downloadMessageShown = false;
+        if (downloadFromSftp && sftpConnected && sftpFiles && sftpFiles.length > 0) {
+            startBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Downloading from SFTP...';
+            
+            // Get list of remote-only files (not already local)
+            const localFilenames = new Set(allFiles.filter(f => f.isLocal).map(f => f.name));
+            const remoteOnlyFiles = sftpFiles.filter(f => !localFilenames.has(f.filename));
+            
+            if (remoteOnlyFiles.length > 0) {
+                const remoteFiles = remoteOnlyFiles.map(f => f.filename);
+                
+                try {
+                    const downloadResponse = await fetch('/api/sftp/download', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ files: remoteFiles })
+                    });
+                    
+                    const downloadData = await downloadResponse.json();
+                    
+                    if (downloadData.success) {
+                        const successCount = downloadData.downloaded_count || 0;
+                        const failedCount = downloadData.failed_count || 0;
+                        
+                        if (successCount > 0) {
+                            showSuccess(`Downloaded ${successCount} file(s) from SFTP. Starting ETL...`);
+                            downloadMessageShown = true;
+                            
+                            // Update table in place with newly downloaded files
+                            await updateTableWithDownloadedFiles(downloadData.results || []);
+                        }
+                        
+                        if (failedCount > 0 && successCount === 0) {
+                            // Only show warning if ALL downloads failed
+                            showWarning(`${failedCount} file(s) failed to download. Continuing with local files...`);
+                            downloadMessageShown = true;
+                        } else if (failedCount > 0 && successCount > 0) {
+                            // Some succeeded, some failed - mention in success message
+                            showInfo(`Downloaded ${successCount} file(s), ${failedCount} failed. Starting ETL...`);
+                            downloadMessageShown = true;
+                        }
+                    } else {
+                        // Only show error if download completely failed
+                        const errorMsg = downloadData.error || 'Download failed';
+                        showWarning(`SFTP download failed: ${errorMsg}. Continuing with local files...`);
+                        downloadMessageShown = true;
+                    }
+                } catch (error) {
+                    console.error('SFTP download error:', error);
+                    showWarning('SFTP download error. Continuing with local files...');
+                    downloadMessageShown = true;
+                }
+            } else {
+                // All files already local - no download needed, but don't show message
+                // Just proceed silently
+            }
+        }
+        
+        // Step 2: Start ETL job
+        startBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting ETL...';
+        
+        const response = await fetch('/api/etl/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                force_reprocess: forceReprocess,
+                max_workers: maxWorkers,
+                selected_files: selectedFiles  // Send selected files to backend
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Only show ETL start message if we didn't already show a download message
+            // This prevents competing notifications
+            if (!downloadMessageShown) {
+                showSuccess(`ETL job started with ${selectedFiles.length} file(s)`);
+            }
+            
+            // Create placeholder job card immediately for instant feedback
+            const placeholderJob = {
+                job_id: data.job_id,
+                status: 'running',
+                files_processed: 0,
+                total_files: selectedFiles.length,
+                total_records_loaded: 0,
+                completed_files: 0,
+                failed_files: 0,
+                start_time: new Date().toISOString(),
+                files: selectedFiles.map(f => ({ filename: f, status: 'pending' }))
+            };
+            
+            // Initialize job card manager if needed
+            if (!jobCardManager) {
+                jobCardManager = new JobCardManager('jobCardsContainer');
+            }
+            
+            // Add the new job card with animation
+            jobCardManager.addJobCard(placeholderJob, true);
+            
+            // Show history section if it was empty
+            document.getElementById('historyContent').classList.remove('d-none');
+            document.getElementById('historyEmpty').classList.add('d-none');
+            
+            // Smooth scroll to history section
+            setTimeout(() => {
+                document.getElementById('jobCardsContainer').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+            }, 200);
+            
+            // Start progress tracking for this specific job
+            startProgressTracking();
+            
+            // Re-enable button after 2 seconds
+            setTimeout(() => {
+                startBtn.disabled = false;
+                startBtn.innerHTML = originalHTML;
+            }, 2000);
+            
+        } else {
+            const error = await response.json();
+            showError(error.detail || 'Failed to start ETL job');
+            
+            // Re-enable button immediately on error
+            startBtn.disabled = false;
+            startBtn.innerHTML = originalHTML;
+        }
+        
+    } catch (error) {
+        console.error('Error starting ETL job:', error);
+        showError('Failed to start ETL job: ' + error.message);
+        
+        // Re-enable button immediately on error
+        startBtn.disabled = false;
+        startBtn.innerHTML = originalHTML;
+    }
+}
+
+async function cancelETLJob() {
+    if (!confirm('Are you sure you want to cancel the current ETL job?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/etl/cancel', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showSuccess('ETL job cancelled successfully');
+            await checkETLStatus();
+            await loadHistory(); // Refresh history
+        } else {
+            const error = await response.json();
+            showError(error.detail || 'Failed to cancel ETL job');
+        }
+        
+    } catch (error) {
+        console.error('Error cancelling ETL job:', error);
+        showError('Failed to cancel ETL job');
+    }
+}
+
+function startProgressTracking() {
+    // Clear any existing interval to prevent duplicates
+    stopProgressTracking();
+    
+    // Update immediately with current active jobs
+    updateActiveJobs();
+    
+    // Poll every 2 seconds for progress updates (reduced from 1s to minimize load)
+    // This is still frequent enough for smooth progress updates
+    progressInterval = setInterval(async () => {
+        await updateActiveJobs();
+    }, 2000);
+}
+
+async function updateActiveJobs() {
+    try {
+        const response = await fetch('/api/etl/status');
+        const data = await response.json();
+        
+        const statusSection = document.getElementById('importStatusSection');
+        const statusText = document.getElementById('importStatusText');
+        const activeJobsCount = document.getElementById('activeJobsCount');
+        
+        if (data.active_jobs && data.active_jobs.length > 0) {
+            // Update status banner
+            const totalFiles = data.active_jobs.reduce((sum, j) => sum + (j.total_files || 0), 0);
+            const processedFiles = data.active_jobs.reduce((sum, j) => sum + (j.files_processed || 0), 0);
+            const totalRecords = data.active_jobs.reduce((sum, j) => sum + (j.total_records_loaded || 0), 0);
+            
+            statusText.innerHTML = `
+                ${data.active_jobs.length} job(s) running: Processing ${processedFiles} of ${totalFiles} files... 
+                (${totalRecords.toLocaleString()} records loaded)
+            `;
+            statusSection.style.display = 'block';
+            
+            // Update active jobs counter
+            activeJobsCount.textContent = `${data.active_jobs.length} Active`;
+            activeJobsCount.style.display = 'inline-block';
+            
+            // Update each active job card
+            if (jobCardManager) {
+                data.active_jobs.forEach(job => {
+                    jobCardManager.updateJobCard(job);
+                    
+                    // Update file-level progress in the table
+                    updateFileProgress(job);
+                });
+            }
+        } else {
+            // No active jobs - hide banner and stop tracking
+            statusSection.style.display = 'none';
+            activeJobsCount.style.display = 'none';
+            stopProgressTracking();
+            
+            // Update history to show completed jobs
+            await loadHistory();
+            
+            // Update file table in place (no full reload)
+            await updateFilesTableInPlace();
+        }
+        
+    } catch (error) {
+        console.error('Error updating active jobs:', error);
+        stopProgressTracking();
+    }
+}
+
+function stopProgressTracking() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+    }
+}
+
+function updateFileProgress(job) {
+    // Update progress for files being processed in this job
+    if (!job.files || !Array.isArray(job.files)) return;
+    
+    job.files.forEach(fileStatus => {
+        const statusCell = document.querySelector(`.file-status-cell[data-filename="${fileStatus.filename}"]`);
+        if (!statusCell) return;
+        
+        const progressContainer = statusCell.querySelector('.etl-progress-container');
+        const progressBar = statusCell.querySelector('.progress-bar');
+        const progressText = statusCell.querySelector('.etl-progress-text');
+        const badges = statusCell.querySelector('.d-flex.align-items-center');
+        
+        if (fileStatus.status === 'processing') {
+            // Show progress bar
+            if (progressContainer) {
+                progressContainer.style.display = 'block';
+            }
+            
+            // Update progress bar
+            if (progressBar) {
+                const percent = fileStatus.progress || 50;
+                progressBar.style.width = `${percent}%`;
+            }
+            
+            // Update text with record count
+            if (progressText && fileStatus.records_processed) {
+                progressText.textContent = `${fileStatus.records_processed.toLocaleString()} records processed`;
+            } else if (progressText) {
+                progressText.textContent = 'Processing...';
+            }
+            
+            // Add processing indicator to badges
+            if (badges) {
+                badges.style.opacity = '0.6';
+            }
+            
+        } else if (fileStatus.status === 'completed') {
+            // Hide progress bar
+            if (progressContainer) {
+                progressContainer.style.display = 'none';
+            }
+            
+            // Restore badge opacity
+            if (badges) {
+                badges.style.opacity = '1';
+            }
+            
+            // Update processed badge
+            const processedBadge = statusCell.querySelectorAll('.badge')[2]; // Third badge is "Processed"
+            if (processedBadge) {
+                processedBadge.classList.remove('bg-secondary');
+                processedBadge.classList.add('bg-primary');
+                processedBadge.style.opacity = '1';
+            }
+            
+            // Add or update record count below badges
+            let detailsDiv = statusCell.querySelector('.text-muted.small.mt-1');
+            if (fileStatus.records_processed) {
+                if (!detailsDiv) {
+                    detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'text-muted small mt-1';
+                    statusCell.appendChild(detailsDiv);
+                }
+                detailsDiv.innerHTML = `<i class="fas fa-database me-1"></i>${fileStatus.records_processed.toLocaleString()} records`;
+            }
+        }
+    });
+}
+
+// Update table with SFTP files without reload
+async function updateTableWithSftpFiles(newSftpFiles) {
+    try {
+        
+        // Update global sftpFiles
+        sftpFiles = newSftpFiles;
+        
+        // Get current local files
+        const localFilesMap = new Map();
+        allFiles.forEach(f => {
+            if (f.isLocal) {
+                localFilesMap.set(f.name, f);
+            }
+        });
+        
+        // Merge SFTP files with existing files
+        const newFiles = [];
+        const updatedFiles = [];
+        
+        newSftpFiles.forEach(sftpFile => {
+            const filename = sftpFile.filename;
+            const existingFile = allFiles.find(f => f.name === filename);
+            
+            if (existingFile) {
+                // Update existing file
+                existingFile.isRemote = true;
+                existingFile.location = existingFile.isLocal ? 'both' : 'remote';
+                existingFile.remotePath = sftpFile.remote_path;
+                existingFile.remoteSize = sftpFile.size;
+                existingFile.remoteModified = sftpFile.modified_time;
+                updatedFiles.push(existingFile);
+            } else {
+                // Add new remote-only file
+                const newFile = {
+                    name: filename,
+                    size: sftpFile.size,
+                    modified: sftpFile.modified_time,
+                    date: extractDateFromFilename(filename, sftpFile.modified_time),
+                    type: getFileType(filename),
+                    isProcessed: false,
+                    location: 'remote',
+                    isLocal: false,
+                    isRemote: true,
+                    remotePath: sftpFile.remote_path
+                };
+                newFiles.push(newFile);
+                allFiles.push(newFile);
+            }
+        });
+        
+        // Re-render affected date groups
+        if (newFiles.length > 0 || updatedFiles.length > 0) {
+            // Re-display files to show new/updated entries
+            displayFilesByDate(allFiles);
+            updateFileStats(allFiles);
+        }
+        
+    } catch (error) {
+        console.error('[updateTableWithSftpFiles] Error:', error);
+    }
+}
+
+// Update table with downloaded files without reload
+async function updateTableWithDownloadedFiles(downloadResults) {
+    try {
+        
+        // Fetch updated local files list
+        const filesResponse = await fetch('/api/files/list');
+        if (!filesResponse.ok) return;
+        
+        const filesData = await filesResponse.json();
+        const downloadedFilenames = new Set();
+        
+        // Process download results
+        downloadResults.forEach(result => {
+            if (result.success && result.filename) {
+                downloadedFilenames.add(result.filename);
+            }
+        });
+        
+        // Update existing file entries
+        downloadedFilenames.forEach(filename => {
+            const existingFile = allFiles.find(f => f.name === filename);
+            const localFile = filesData.files?.find(f => f.name === filename);
+            
+            if (existingFile && localFile) {
+                // File now exists locally
+                existingFile.isLocal = true;
+                existingFile.location = existingFile.isRemote ? 'both' : 'local';
+                existingFile.size = localFile.size;
+                existingFile.modified = localFile.modified;
+                existingFile.hash = localFile.hash;
+            } else if (localFile && !existingFile) {
+                // New file downloaded - add to allFiles
+                const newFile = {
+                    ...localFile,
+                    date: extractDateFromFilename(localFile.name, localFile.modified),
+                    type: getFileType(localFile.name),
+                    isProcessed: false,
+                    location: 'local',
+                    isLocal: true,
+                    isRemote: false
+                };
+                allFiles.push(newFile);
+            }
+        });
+        
+        // Re-display files to show updated status
+        displayFilesByDate(allFiles);
+        updateFileStats(allFiles);
+        
+    } catch (error) {
+        console.error('[updateTableWithDownloadedFiles] Error:', error);
+    }
+}
+
+// Update files table in place without full page reload
+async function updateFilesTableInPlace() {
+    try {
+        // Fetch updated processing history to get record counts
+        const historyResponse = await fetch('/api/etl/processing-history?limit=1000');
+        if (!historyResponse.ok) {
+            return;
+        }
+        
+        const historyData = await historyResponse.json();
+        if (!historyData.success || !historyData.data) {
+            return;
+        }
+        
+        // Build map of file names to record counts and hashes
+        const fileRecordCounts = new Map();
+        const processedFileHashes = new Set();
+        
+        historyData.data.forEach(record => {
+            if (record.file_name && record.total_records) {
+                fileRecordCounts.set(record.file_name, record.total_records);
+            }
+            if (record.file_hash) {
+                processedFileHashes.add(record.file_hash);
+            }
+        });
+        
+        // Update each file row in the table
+        let updatedCount = 0;
+        document.querySelectorAll('tr[data-filename]').forEach(row => {
+            const filename = row.dataset.filename;
+            const fileHash = row.dataset.fileHash;
+            const recordCount = fileRecordCounts.get(filename);
+            const isProcessed = fileHash && processedFileHashes.has(fileHash);
+            
+            if (recordCount !== undefined || isProcessed) {
+                const statusCell = row.querySelector('.file-status-cell');
+                if (!statusCell) return;
+                
+                // Update processed badge
+                const processedBadge = statusCell.querySelectorAll('.badge')[2]; // Third badge is "Processed"
+                if (processedBadge && isProcessed) {
+                    processedBadge.classList.remove('bg-secondary');
+                    processedBadge.classList.add('bg-primary');
+                    processedBadge.style.opacity = '1';
+                }
+                
+                // Update or add record count
+                if (recordCount !== undefined) {
+                    let detailsDiv = statusCell.querySelector('.text-muted.small.mt-1');
+                    if (!detailsDiv) {
+                        detailsDiv = document.createElement('div');
+                        detailsDiv.className = 'text-muted small mt-1';
+                        statusCell.appendChild(detailsDiv);
+                    }
+                    detailsDiv.innerHTML = `<i class="fas fa-database me-1"></i>${recordCount.toLocaleString()} records`;
+                }
+                
+                // Update checkbox state (uncheck if processed)
+                const checkbox = row.querySelector('.file-checkbox');
+                if (checkbox && isProcessed) {
+                    checkbox.checked = false;
+                }
+                
+                // Update allFiles array
+                const fileIndex = allFiles.findIndex(f => f.name === filename);
+                if (fileIndex !== -1) {
+                    allFiles[fileIndex].isProcessed = isProcessed;
+                    if (recordCount !== undefined) {
+                        allFiles[fileIndex].etlRecords = recordCount;
+                    }
+                }
+                
+                updatedCount++;
+            }
+        });
+        
+        // Update file stats without reloading
+        updateFileStats(allFiles);
+        
+    } catch (error) {
+        console.error('[updateFilesTableInPlace] Error:', error);
+    }
+}
+
+// ============================================================================
+// JOB CARD MANAGER - Professional job card rendering and management
+// ============================================================================
+class JobCardManager {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.jobCards = new Map(); // Track job cards by job_id
+        this.minProgressDuration = 3000; // Minimum 3 seconds for UX
+        this.jobStartTimes = new Map(); // Track when jobs were started for minimum duration
+    }
+    
+    createJobCard(job, isNew = false) {
+        const jobId = job.job_id;
+        const isRunning = job.status === 'running' || job.status === 'in_progress';
+        const isCompleted = job.status === 'completed';
+        const isFailed = job.status === 'failed';
+        
+        // Calculate progress percentage
+        const progressPercent = job.total_files > 0 ? 
+            Math.round((job.files_processed / job.total_files) * 100) : 0;
+        
+        // Duration calculation with ceiling for seconds
+        const durationMs = job.end_time ? 
+            new Date(job.end_time) - new Date(job.start_time) : 
+            job.start_time ? Date.now() - new Date(job.start_time) : 0;
+        const duration = this.formatDuration(durationMs);
+        
+        // Create timeline string for completed jobs
+        const timeline = (job.start_time && job.end_time) ? 
+            this.formatTimeline(job.start_time, job.end_time, durationMs) : '';
+        
+        // Determine who ran the job
+        const runByText = (job.trigger_type !== 'automatic' && job.triggered_by) ? 
+            `by <strong>${job.triggered_by}</strong>` : '';
+        
+        // Create card element
+        const card = document.createElement('div');
+        card.className = `job-card job-${job.status} ${isNew ? 'new-job' : ''}`;
+        card.id = `job-card-${jobId}`;
+        card.dataset.jobId = jobId;
+        
+        card.innerHTML = `
+            <div class="job-card-header">
+                <div class="d-flex justify-content-between align-items-center" onclick="JobCardManager.toggleCard('${jobId}')">
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <i class="fas fa-chevron-right collapse-icon me-2" id="icon-${jobId}"></i>
+                        <span class="job-status-badge badge bg-${this.getStatusColor(job.status)} me-2">
+                            ${isRunning ? '<i class="fas fa-spinner fa-spin me-1"></i>' : ''}
+                            ${job.status.toUpperCase()}
+                        </span>
+                        <strong class="me-2" style="font-size: 0.9rem;">${jobId}</strong>
+                        ${job.trigger_type === 'automatic' ? 
+                            '<span class="badge bg-info me-2" style="font-size: 0.75rem;"><i class="fas fa-robot me-1"></i>Auto</span>' : 
+                            '<span class="badge bg-secondary me-2" style="font-size: 0.75rem;"><i class="fas fa-user me-1"></i>Manual</span>'}
+                        ${runByText ? `<span class="text-muted small">${runByText}</span>` : ''}
+                    </div>
+                    <div class="d-flex align-items-center gap-2" style="font-size: 0.85rem;">
+                        <span class="text-muted"><i class="fas fa-file-alt me-1"></i>${job.files_processed}/${job.total_files}</span>
+                        <span class="text-muted"><i class="fas fa-database me-1"></i>${(job.total_records_loaded || 0).toLocaleString()}</span>
+                        <span class="text-muted"><i class="fas fa-clock me-1"></i>${duration}</span>
+                        <button class="btn btn-sm btn-outline-secondary" style="padding: 0.15rem 0.4rem; font-size: 0.75rem;" 
+                                onclick="event.stopPropagation(); JobCardManager.copyJobData('${jobId}')" 
+                                title="Copy job data as JSON">
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                
+                ${timeline ? `
+                <div class="mt-2">
+                    <small class="text-muted" style="font-family: monospace; font-size: 0.85rem;">
+                        <i class="fas fa-hourglass-start me-1"></i>${timeline}
+                    </small>
+                </div>
+                ` : ''}
+                
+                <!-- Progress Bar (shown only when running) -->
+                ${isRunning ? `
+                <div class="mt-3">
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated-smooth progress-bar-minimum bg-primary" 
+                             role="progressbar" 
+                             style="width: ${Math.max(progressPercent, 3)}%"
+                             id="progress-${jobId}">
+                        </div>
+                    </div>
+                    <small class="text-muted">${progressPercent}% complete</small>
+                </div>
+                ` : ''}
+            </div>
+            
+            <div class="collapse job-card-body" id="collapse-${jobId}">
+                <div class="row g-3">
+                    <!-- Statistics Cards -->
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">${job.files_processed}</div>
+                            <div class="metric-label">Files Processed</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">${(job.total_records_loaded || 0).toLocaleString()}</div>
+                            <div class="metric-label">Records Loaded</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">${job.completed_files || 0}</div>
+                            <div class="metric-label">Completed</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="metric-card">
+                            <div class="metric-value">${job.failed_files || 0}</div>
+                            <div class="metric-label">Failed</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Job Details -->
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <h6 class="mb-3"><i class="fas fa-info-circle me-2"></i>Job Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td class="text-muted" style="width: 140px;">Job ID:</td>
+                                <td><code class="small">${jobId}</code></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Trigger Type:</td>
+                                <td>
+                                    ${job.trigger_type === 'automatic' ? 
+                                        '<span class="badge bg-info"><i class="fas fa-robot me-1"></i>Automatic</span>' : 
+                                        '<span class="badge bg-secondary"><i class="fas fa-user me-1"></i>Manual</span>'}
+                                    ${(job.trigger_type !== 'automatic' && job.triggered_by) ? ` by <strong>${job.triggered_by}</strong>` : ''}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Started:</td>
+                                <td>${new Date(job.start_time).toLocaleString()}</td>
+                            </tr>
+                            ${job.end_time ? `
+                            <tr>
+                                <td class="text-muted">Completed:</td>
+                                <td>${new Date(job.end_time).toLocaleString()}</td>
+                            </tr>
+                            ` : ''}
+                            <tr>
+                                <td class="text-muted">Duration:</td>
+                                <td>${duration}</td>
+                            </tr>
+                            ${job.total_records_processed ? `
+                            <tr>
+                                <td class="text-muted">Records Processed:</td>
+                                <td>${job.total_records_processed.toLocaleString()}</td>
+                            </tr>
+                            ` : ''}
+                        </table>
+                        
+                        ${job.status === 'completed' ? `
+                        <button class="btn btn-sm btn-outline-warning mt-2" onclick="JobCardManager.undoJob('${jobId}')">
+                            <i class="fas fa-undo me-1"></i>Undo Import
+                        </button>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="mb-3"><i class="fas fa-list me-2"></i>Files</h6>
+                        <div class="file-list-compact">
+                            ${this.renderFileList(job)}
+                        </div>
+                    </div>
+                </div>
+                
+                ${job.error_messages && job.error_messages.length > 0 ? `
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-danger mb-0">
+                            <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Errors</h6>
+                            <ul class="mb-0">
+                                ${job.error_messages.slice(0, 5).map(err => `<li><small>${err}</small></li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        `;
+        
+        return card;
+    }
+    
+    renderFileList(job) {
+        if (!job.files || job.files.length === 0) {
+            return '<p class="text-muted small mb-0">No file details available</p>';
+        }
+        
+        return job.files.map(file => {
+            const fileName = typeof file === 'string' ? file : file.filename || file.file_path || 'Unknown';
+            const fileStatus = typeof file === 'object' ? file.status : null;
+            
+            return `
+                <div class="file-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-truncate" style="max-width: 70%;" title="${fileName}">
+                            <i class="fas fa-file-alt me-2 text-muted"></i>${fileName}
+                        </span>
+                        ${fileStatus ? `
+                            <span class="badge badge-sm bg-${this.getStatusColor(fileStatus)}">${fileStatus}</span>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    updateJobCard(job) {
+        const existingCard = document.getElementById(`job-card-${job.job_id}`);
+        if (!existingCard) {
+            // Card doesn't exist, create it
+            this.addJobCard(job, false);
+            return;
+        }
+        
+        // Update progress bar if job is running
+        if (job.status === 'running' || job.status === 'in_progress') {
+            const progressBar = document.getElementById(`progress-${job.job_id}`);
+            if (progressBar) {
+                const progressPercent = job.total_files > 0 ? 
+                    Math.round((job.files_processed / job.total_files) * 100) : 0;
+                progressBar.style.width = `${Math.max(progressPercent, 3)}%`;
+                progressBar.parentElement.nextElementSibling.textContent = `${progressPercent}% complete`;
+            }
+        }
+        
+        // Check if job just completed and enforce minimum display time
+        const isNowCompleted = job.status === 'completed' || job.status === 'failed' || job.status === 'cancelled';
+        const wasRunning = existingCard.classList.contains('job-running');
+        
+        if (isNowCompleted && wasRunning) {
+            const startTime = this.jobStartTimes.get(job.job_id) || Date.now();
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(0, this.minProgressDuration - elapsed);
+            
+            if (remaining > 0) {
+                // Wait for minimum duration before updating to completed state
+                setTimeout(() => {
+                    this.replaceJobCard(job);
+                }, remaining);
+                return;
+            }
+        }
+        
+        // Replace the card with updated version
+        this.replaceJobCard(job);
+    }
+    
+    replaceJobCard(job) {
+        const existingCard = document.getElementById(`job-card-${job.job_id}`);
+        if (existingCard) {
+            const newCard = this.createJobCard(job, false);
+            existingCard.replaceWith(newCard);
+            this.jobCards.set(job.job_id, newCard);
+        }
+    }
+    
+    addJobCard(job, isNew = true) {
+        const card = this.createJobCard(job, isNew);
+        
+        // Track start time for minimum duration enforcement
+        if (job.status === 'running' || job.status === 'in_progress') {
+            this.jobStartTimes.set(job.job_id, Date.now());
+        }
+        
+        // Insert at the beginning
+        if (this.container.firstChild) {
+            this.container.insertBefore(card, this.container.firstChild);
+        } else {
+            this.container.appendChild(card);
+        }
+        
+        this.jobCards.set(job.job_id, card);
+        
+        // Auto-expand if it's a new job
+        if (isNew) {
+            // Remove from manually collapsed set since this is a new job
+            manuallyCollapsedJobs.delete(job.job_id);
+            
+            setTimeout(() => {
+                const collapse = document.getElementById(`collapse-${job.job_id}`);
+                const icon = document.getElementById(`icon-${job.job_id}`);
+                if (collapse) {
+                    collapse.classList.add('show');
+                    icon.classList.add('rotated');
+                }
+                
+                // Smooth scroll to the new card
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+    }
+    
+    static toggleCard(jobId) {
+        const collapse = document.getElementById(`collapse-${jobId}`);
+        const icon = document.getElementById(`icon-${jobId}`);
+        
+        // Get the job card to check if it's running
+        const card = document.getElementById(`job-card-${jobId}`);
+        const isRunning = card && (card.classList.contains('job-running') || card.classList.contains('job-in_progress'));
+        
+        if (collapse.classList.contains('show')) {
+            // User is collapsing
+            collapse.classList.remove('show');
+            icon.classList.remove('rotated');
+            // Only track manual collapse for non-running jobs
+            // Running jobs will be re-expanded on next update
+            if (!isRunning) {
+                manuallyCollapsedJobs.add(jobId);
+            }
+        } else {
+            // User is expanding - remove from collapsed tracking
+            collapse.classList.add('show');
+            icon.classList.add('rotated');
+            manuallyCollapsedJobs.delete(jobId);
+        }
+    }
+    
+    static async copyJobData(jobId) {
+        try {
+            // Fetch the full job data from the API
+            const response = await fetch(`/api/etl/job/${jobId}`);
+            const result = await response.json();
+            
+            if (!result.job) {
+                showError('Failed to fetch job data');
+                return;
+            }
+            
+            // Format as pretty JSON
+            const jsonData = JSON.stringify(result.job, null, 2);
+            
+            // Copy to clipboard
+            await navigator.clipboard.writeText(jsonData);
+            
+            showSuccess('Job data copied to clipboard');
+        } catch (error) {
+            console.error('Error copying job data:', error);
+            showError('Failed to copy job data: ' + error.message);
+        }
+    }
+    
+    // Cancel functionality removed - jobs cannot be cancelled
+    // Keeping undoJob for completed imports
+    
+    static async undoJob(jobId) {
+        if (!confirm(`Are you sure you want to undo all data imported by job ${jobId}?\n\nThis will permanently delete all records that were inserted during this import.`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/etl/undo/${jobId}`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showSuccess(`Successfully undone import: ${result.records_deleted || 0} records deleted from ${result.tables_affected || 0} tables`);
+                // Refresh history after undo
+                await loadHistory();
+            } else {
+                showError(result.error || 'Failed to undo job');
+            }
+        } catch (error) {
+            console.error('Error undoing job:', error);
+            showError('Failed to undo job: ' + error.message);
+        }
+    }
+    
+    getStatusColor(status) {
+        const colors = {
+            'running': 'primary',
+            'in_progress': 'primary',
+            'completed': 'success',
+            'failed': 'danger',
+            'cancelled': 'warning',
+            'pending': 'secondary'
+        };
+        return colors[status?.toLowerCase()] || 'secondary';
+    }
+    
+    formatDuration(ms) {
+        // Always round UP for seconds (1 decimal place)
+        const totalSeconds = ms / 1000;
+        const seconds = Math.ceil(totalSeconds * 10) / 10;
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m`;
+        } else if (minutes > 0) {
+            const remainingSeconds = (seconds % 60).toFixed(1);
+            return `${minutes}m ${remainingSeconds}s`;
+        } else {
+            return `${seconds.toFixed(1)}s`;
+        }
+    }
+    
+    formatTimeline(startTime, endTime, durationMs) {
+        // Format: (start_time) --( duration )--> end_time
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        
+        // Format dates without seconds for cleaner display
+        const startStr = start.toLocaleString();
+        const endStr = end.toLocaleString();
+        
+        // Calculate duration with ceiling for seconds (1 decimal place)
+        const totalSeconds = durationMs / 1000;
+        const durationSeconds = (Math.ceil(totalSeconds * 10) / 10).toFixed(1);
+        const durationText = durationSeconds === '1.0' ? '1.0 second' : `${durationSeconds} seconds`;
+        
+        return `(${startStr}) --( ${durationText} )--> ${endStr}`;
+    }
+    
+    clearAllCards() {
+        this.container.innerHTML = '';
+        this.jobCards.clear();
+    }
+}
+
+// Initialize global job card manager
+let jobCardManager = null;
+
+// Track which jobs the user has manually collapsed
+const manuallyCollapsedJobs = new Set();
+
+async function loadHistory() {
+    const loadingDiv = document.getElementById('historyLoading');
+    const contentDiv = document.getElementById('historyContent');
+    const emptyDiv = document.getElementById('historyEmpty');
+    const activeJobsCount = document.getElementById('activeJobsCount');
+    
+    // Initialize job card manager if not already done
+    if (!jobCardManager) {
+        jobCardManager = new JobCardManager('jobCardsContainer');
+    }
+    
+    try {
+        const response = await fetch('/api/etl/history?limit=10');
+        const data = await response.json();
+        
+        
+        loadingDiv.classList.add('d-none');
+        
+        if (data.history && data.history.length > 0) {
+            // Save current expansion state before clearing
+            const currentExpandedState = new Map();
+            data.history.forEach(job => {
+                const collapse = document.getElementById(`collapse-${job.job_id}`);
+                if (collapse) {
+                    currentExpandedState.set(job.job_id, collapse.classList.contains('show'));
+                }
+            });
+            
+            // Clear existing cards
+            jobCardManager.clearAllCards();
+            
+            // Find ongoing jobs and the latest completed job
+            const ongoingJobIds = [];
+            let latestCompletedJobId = null;
+            
+            for (let i = 0; i < data.history.length; i++) {
+                const job = data.history[i];
+                const status = job.status?.toLowerCase();
+                
+                // Collect ongoing jobs
+                if (status === 'running' || status === 'in_progress') {
+                    ongoingJobIds.push(job.job_id);
+                }
+                
+                // Find latest completed job (first in list since sorted by date desc)
+                if (status === 'completed' && !latestCompletedJobId) {
+                    latestCompletedJobId = job.job_id;
+                }
+            }
+            
+            // Add all jobs as cards
+            data.history.forEach((job, index) => {
+                jobCardManager.addJobCard(job, false); // Not marking as new since it's initial load
+            });
+            
+            // Auto-expand ongoing jobs and the latest completed job, respecting manual collapse state
+            setTimeout(() => {
+                // Expand all ongoing jobs (always expand running jobs, ignore manual collapse state)
+                ongoingJobIds.forEach(jobId => {
+                    // Running jobs should always be expanded - remove from collapsed tracking
+                    manuallyCollapsedJobs.delete(jobId);
+                    
+                    const collapse = document.getElementById(`collapse-${jobId}`);
+                    const icon = document.getElementById(`icon-${jobId}`);
+                    if (collapse && icon) {
+                        collapse.classList.add('show');
+                        icon.classList.add('rotated');
+                    }
+                });
+                
+                // Expand latest completed job (if no ongoing jobs and not manually collapsed)
+                if (ongoingJobIds.length === 0 && latestCompletedJobId && !manuallyCollapsedJobs.has(latestCompletedJobId)) {
+                    const collapse = document.getElementById(`collapse-${latestCompletedJobId}`);
+                    const icon = document.getElementById(`icon-${latestCompletedJobId}`);
+                    if (collapse && icon) {
+                        collapse.classList.add('show');
+                        icon.classList.add('rotated');
+                    }
+                }
+                
+                // Restore any previously expanded states that were saved
+                currentExpandedState.forEach((wasExpanded, jobId) => {
+                    const collapse = document.getElementById(`collapse-${jobId}`);
+                    const icon = document.getElementById(`icon-${jobId}`);
+                    if (collapse && icon) {
+                        if (wasExpanded && !manuallyCollapsedJobs.has(jobId)) {
+                            collapse.classList.add('show');
+                            icon.classList.add('rotated');
+                        } else if (!wasExpanded || manuallyCollapsedJobs.has(jobId)) {
+                            collapse.classList.remove('show');
+                            icon.classList.remove('rotated');
+                        }
+                    }
+                });
+            }, 100);
+            
+            // Count and display active jobs
+            const activeCount = data.history.filter(j => j.status === 'running' || j.status === 'in_progress').length;
+            if (activeCount > 0) {
+                activeJobsCount.textContent = `${activeCount} Active`;
+                activeJobsCount.style.display = 'inline-block';
+            } else {
+                activeJobsCount.style.display = 'none';
+            }
+            
+            contentDiv.classList.remove('d-none');
+            emptyDiv.classList.add('d-none');
+        } else {
+            contentDiv.classList.add('d-none');
+            emptyDiv.classList.remove('d-none');
+        }
+        
+    } catch (error) {
+        console.error('Error loading history:', error);
+        loadingDiv.classList.add('d-none');
+        emptyDiv.classList.remove('d-none');
+    }
+}
+
+// Helper functions
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function getStatusColor(status) {
+    switch (status?.toLowerCase()) {
+        case 'completed':
+        case 'success':
+            return 'success';
+        case 'running':
+        case 'in_progress':
+            return 'primary';
+        case 'failed':
+        case 'error':
+            return 'danger';
+        case 'cancelled':
+            return 'warning';
+        default:
+            return 'secondary';
+    }
+}
+
+function formatDuration(milliseconds) {
+    const totalSeconds = milliseconds / 1000;
+    const seconds = Math.ceil(totalSeconds * 10) / 10;
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes % 60}m ${(seconds % 60).toFixed(1)}s`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${(seconds % 60).toFixed(1)}s`;
+    } else {
+        return `${seconds.toFixed(1)}s`;
+    }
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    stopProgressTracking();
+});
+
+// ============================================================================
+// SFTP FUNCTIONALITY
+// ============================================================================
+
+let sftpConnected = false;
+let sftpFiles = [];
+let sftpEnabled = false;
+
+// ============================================================================
+// SFTP Initialization and Integration
+// ============================================================================
+
+async function initSftpAndLoadFiles() {
+    // Check SFTP settings first
+    try {
+        const response = await fetch('/api/settings/sftp');
+        const data = await response.json();
+        
+        if (data.success && data.settings.enabled) {
+            sftpEnabled = true;
+            updateSftpStatusBadge('enabled', 'Enabled - Click to connect');
+            const connectBtn = document.getElementById('connect_sftp_btn');
+            if (connectBtn) connectBtn.style.display = 'inline-block';
+        } else {
+            sftpEnabled = false;
+            updateSftpStatusBadge('disabled', 'SFTP Not Configured');
+            const connectBtn = document.getElementById('connect_sftp_btn');
+            if (connectBtn) connectBtn.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error checking SFTP status:', error);
+        updateSftpStatusBadge('error', 'Error checking SFTP');
+    }
+}
+
+function updateSftpStatusBadge(status, text) {
+    const badge = document.getElementById('sftp_status_badge');
+    if (!badge) return;
+    
+    badge.className = 'badge';
+    
+    switch(status) {
+        case 'enabled':
+            badge.className += ' bg-secondary';
+            badge.innerHTML = `<i class="fas fa-plug me-1"></i>${text}`;
+            break;
+        case 'connected':
+            badge.className += ' bg-success';
+            badge.innerHTML = `<i class="fas fa-check-circle me-1"></i>${text}`;
+            break;
+        case 'disconnected':
+            badge.className += ' bg-secondary';
+            badge.innerHTML = `<i class="fas fa-plug me-1"></i>${text}`;
+            break;
+        case 'disabled':
+            badge.className += ' bg-warning text-dark';
+            badge.innerHTML = `<i class="fas fa-exclamation-triangle me-1"></i>${text}`;
+            break;
+        case 'error':
+            badge.className += ' bg-danger';
+            badge.innerHTML = `<i class="fas fa-times-circle me-1"></i>${text}`;
+            break;
+        default:
+            badge.className += ' bg-secondary';
+            badge.innerHTML = `<i class="fas fa-circle-notch fa-spin me-1"></i>${text}`;
+    }
+}
+
+function updateFileStats(files) {
+    console.log('[updateFileStats] Called with', files.length, 'files');
+    
+    const total = files.length;
+    const local = files.filter(f => f.isLocal || f.location === 'local' || f.location === 'both').length;
+    const remote = files.filter(f => f.isRemote || f.location === 'remote' || f.location === 'both').length;
+    const both = files.filter(f => (f.isLocal && f.isRemote) || f.location === 'both').length;
+    const processed = files.filter(f => f.isProcessed).length;
+    
+    console.log('[updateFileStats] Calculated:', { total, local, remote, both, processed });
+    
+    const totalEl = document.getElementById('total_files_count');
+    const localEl = document.getElementById('local_files_count');
+    const remoteEl = document.getElementById('remote_files_count');
+    const bothEl = document.getElementById('both_files_count');
+    const processedEl = document.getElementById('processed_files_count');
+    
+    console.log('[updateFileStats] Elements:', {
+        totalEl: !!totalEl,
+        localEl: !!localEl,
+        remoteEl: !!remoteEl,
+        bothEl: !!bothEl,
+        processedEl: !!processedEl
+    });
+    
+    if (totalEl) {
+        totalEl.textContent = total;
+    }
+    if (localEl) {
+        localEl.textContent = local;
+    }
+    if (remoteEl) {
+        remoteEl.textContent = remote;
+    }
+    if (bothEl) {
+        bothEl.textContent = both;
+    }
+    if (processedEl) {
+        processedEl.textContent = processed;
+    }
+}
+
+// Refresh using SFTP button
+setTimeout(() => {
+    const refreshUsingSftpBtn = document.getElementById('refreshUsingSftpBtn');
+    if (refreshUsingSftpBtn) {
+        refreshUsingSftpBtn.addEventListener('click', async function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Connecting to SFTP...';
+            
+            try {
+                // Test connection
+                const testResponse = await fetch('/api/sftp/test-connection', { method: 'POST' });
+                const testData = await testResponse.json();
+                
+                if (testData.success) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Discovering files...';
+                    
+                    // Discover files
+                    const discoverResponse = await fetch('/api/sftp/discover-files', { method: 'POST' });
+                    const discoverData = await discoverResponse.json();
+                    
+                    if (discoverData.success) {
+                        sftpConnected = true;
+                        sftpFiles = discoverData.files || [];
+                        
+                        // Update last sync time
+                        if (discoverData.sync_time && typeof updateLastSyncTime === 'function') {
+                            updateLastSyncTime(discoverData.sync_time);
+                        }
+                        
+                        // Update table in place with SFTP files (no reload)
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating table...';
+                        await updateTableWithSftpFiles(sftpFiles);
+                        
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                        showSuccess(`Synced from SFTP! Found ${sftpFiles.length} remote files.`);
+                    } else {
+                        throw new Error(discoverData.message || 'Failed to discover files');
+                    }
+                } else {
+                    throw new Error(testData.message || 'Connection failed');
+                }
+            } catch (error) {
+                console.error('SFTP connection error:', error);
+                showError('Failed to connect to SFTP: ' + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
+    }
+}, 100);
+
+// Check SFTP settings status on page load
+async function checkSFTPSettings() {
+    const statusBadge = document.getElementById('sftp_settings_status');
+    const connectBtn = document.getElementById('connect_sftp_btn');
+    const sftpInfo = document.getElementById('sftp_info');
+    
+    try {
+        const response = await fetch('/api/settings/sftp');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const settings = data.settings;
+            
+            // Check if SFTP is enabled and configured
+            if (settings.enabled && settings.host && settings.username) {
+                statusBadge.className = 'badge bg-success';
+                statusBadge.innerHTML = '<i class="fas fa-check-circle me-1"></i>Configured';
+                
+                // Show SFTP info
+                document.getElementById('sftp_host_display').textContent = settings.host;
+                document.getElementById('sftp_user_display').textContent = settings.username;
+                sftpInfo.style.display = 'block';
+                
+                connectBtn.disabled = false;
+            } else {
+                statusBadge.className = 'badge bg-warning';
+                statusBadge.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i>Not Configured';
+                connectBtn.disabled = true;
+                connectBtn.title = 'Please configure SFTP settings first';
+            }
+        } else {
+            statusBadge.className = 'badge bg-danger';
+            statusBadge.innerHTML = '<i class="fas fa-times-circle me-1"></i>Error';
+            connectBtn.disabled = true;
+        }
+    } catch (error) {
+        console.error('Error checking SFTP settings:', error);
+        statusBadge.className = 'badge bg-danger';
+        statusBadge.innerHTML = '<i class="fas fa-times-circle me-1"></i>Error';
+        connectBtn.disabled = true;
+    }
+}
+
+// Connect to SFTP server and list files
+async function connectToSFTP() {
+    const connectBtn = document.getElementById('connect_sftp_btn');
+    const statusMessage = document.getElementById('sftp_status_message');
+    const connectionStatus = document.getElementById('sftp_connection_status');
+    const filesSection = document.getElementById('sftp_files_section');
+    
+    // Show loading
+    connectBtn.disabled = true;
+    connectBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Connecting...';
+    
+    statusMessage.style.display = 'block';
+    statusMessage.className = 'alert alert-info';
+    statusMessage.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Connecting to SFTP server...';
+    
+    try {
+        // First test connection
+        const testResponse = await fetch('/api/sftp/test-connection', {
+            method: 'POST'
+        });
+        const testData = await testResponse.json();
+        
+        if (!testData.success) {
+            throw new Error(testData.message || 'Connection failed');
+        }
+        
+        // Connection successful, now list files
+        statusMessage.className = 'alert alert-info';
+        statusMessage.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Listing files...';
+        
+        const listResponse = await fetch('/api/sftp/discover-files', {
+            method: 'POST'
+        });
+        const listData = await listResponse.json();
+        
+        if (!listData.success) {
+            throw new Error(listData.error || 'Failed to list files');
+        }
+        
+        // Success!
+        sftpConnected = true;
+        sftpFiles = listData.files || [];
+        
+        // Sort by modified time (most recent first) and limit to 30
+        sftpFiles.sort((a, b) => new Date(b.modified_time) - new Date(a.modified_time));
+        sftpFiles = sftpFiles.slice(0, 30);
+        
+        connectionStatus.style.display = 'inline-block';
+        connectionStatus.className = 'badge bg-success';
+        connectionStatus.innerHTML = '<i class="fas fa-check-circle me-1"></i>Connected';
+        
+        statusMessage.className = 'alert alert-success';
+        statusMessage.innerHTML = `<i class="fas fa-check-circle me-2"></i><strong>Connected!</strong> Found ${sftpFiles.length} file(s).`;
+        
+        // Hide connect section, show files section
+        setTimeout(() => {
+            statusMessage.style.display = 'none';
+            filesSection.style.display = 'block';
+            renderSFTPFiles();
+        }, 1500);
+        
+    } catch (error) {
+        console.error('SFTP connection error:', error);
+        
+        statusMessage.className = 'alert alert-danger';
+        statusMessage.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i><strong>Connection Failed:</strong> ${error.message}`;
+        
+        connectionStatus.style.display = 'inline-block';
+        connectionStatus.className = 'badge bg-danger';
+        connectionStatus.innerHTML = '<i class="fas fa-times-circle me-1"></i>Failed';
+        
+        connectBtn.disabled = false;
+        connectBtn.innerHTML = '<i class="fas fa-plug me-2"></i>Connect to SFTP Server';
+    }
+}
+
+// Render SFTP files in table
+function renderSFTPFiles() {
+    const tbody = document.getElementById('sftp_files_tbody');
+    const fileCount = document.getElementById('sftp_file_count');
+    
+    if (sftpFiles.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-muted py-4">
+                    <i class="fas fa-folder-open fa-2x mb-2 opacity-50"></i>
+                    <p class="mb-0">No files found on SFTP server</p>
+                </td>
+            </tr>
+        `;
+        fileCount.textContent = '0 files available';
+        return;
+    }
+    
+    fileCount.textContent = `${sftpFiles.length} file${sftpFiles.length !== 1 ? 's' : ''} available (showing most recent 30)`;
+    
+    tbody.innerHTML = sftpFiles.map((file, index) => {
+        const fileIcon = getFileIcon(file.filename);
+        const fileSize = formatFileSize(file.size);
+        const modifiedDate = formatDateTime(file.modified_time);
+        
+        return `
+            <tr>
+                <td>
+                    <input type="checkbox" class="form-check-input sftp-file-checkbox" 
+                           data-filename="${escapeHtml(file.filename)}" 
+                           data-path="${escapeHtml(file.remote_path)}">
+                </td>
+                <td>
+                    <i class="${fileIcon} me-2" style="color: #667eea;"></i>
+                    <span style="font-family: 'Courier New', monospace; font-size: 12px;">${escapeHtml(file.filename)}</span>
+                </td>
+                <td class="text-muted">${fileSize}</td>
+                <td class="text-muted"><small>${modifiedDate}</small></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary download-single-sftp-btn" 
+                            data-filename="${escapeHtml(file.filename)}"
+                            data-path="${escapeHtml(file.remote_path)}"
+                            title="Download this file">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Add event listeners
+    document.querySelectorAll('.sftp-file-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSFTPSelectedCount);
+    });
+    
+    document.querySelectorAll('.download-single-sftp-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const filename = this.dataset.filename;
+            const path = this.dataset.path;
+            downloadSFTPFiles([filename]);
+        });
+    });
+}
+
+// Update selected count
+function updateSFTPSelectedCount() {
+    const checkboxes = document.querySelectorAll('.sftp-file-checkbox:checked');
+    const count = checkboxes.length;
+    const selectedCountSpan = document.getElementById('sftp_selected_count');
+    const downloadBtn = document.getElementById('download_selected_sftp_btn');
+    
+    selectedCountSpan.textContent = `${count} file${count !== 1 ? 's' : ''} selected`;
+    downloadBtn.disabled = count === 0;
+}
+
+// Download selected SFTP files
+async function downloadSFTPFiles(filenames = null) {
+    // If no filenames provided, get from checkboxes
+    if (!filenames) {
+        const checkboxes = document.querySelectorAll('.sftp-file-checkbox:checked');
+        filenames = Array.from(checkboxes).map(cb => cb.dataset.filename);
+    }
+    
+    if (filenames.length === 0) {
+        showToast('Please select at least one file to download', 'warning');
+        return;
+    }
+    
+    const downloadBtn = document.getElementById('download_selected_sftp_btn');
+    const originalText = downloadBtn.innerHTML;
+    
+    downloadBtn.disabled = true;
+    downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Downloading...';
+    
+    try {
+        const formData = new FormData();
+        filenames.forEach(filename => formData.append('files', filename));
+        
+        const response = await fetch('/api/sftp/download', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(`Successfully downloaded ${data.downloaded_count} file(s)!`, 'success');
+            
+            // Update table in place with downloaded files
+            await updateTableWithDownloadedFiles(data.results || []);
+            
+            // Uncheck all checkboxes
+            document.querySelectorAll('.sftp-file-checkbox:checked').forEach(cb => cb.checked = false);
+            updateSFTPSelectedCount();
+        } else {
+            throw new Error(data.error || 'Download failed');
+        }
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        showToast(`Download failed: ${error.message}`, 'error');
+    } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = originalText;
+    }
+}
+
+// Download single file from table
+async function downloadSingleFileFromTable(filename) {
+    if (!filename) {
+        showToast('No filename specified', 'error');
+        return;
+    }
+    
+    try {
+        showToast(`Downloading ${filename}...`, 'info');
+        
+        const formData = new FormData();
+        formData.append('files', filename);
+        
+        const response = await fetch('/api/sftp/download', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.downloaded_count > 0) {
+            showToast(`✓ ${filename} downloaded successfully!`, 'success');
+            
+            // Update table in place - file is now local
+            await updateTableWithDownloadedFiles(data.results || []);
+        } else {
+            throw new Error(data.error || 'Download failed');
+        }
+    } catch (error) {
+        console.error('Download error:', error);
+        showToast(`Failed to download ${filename}: ${error.message}`, 'error');
+    }
+}
+
+// Disconnect from SFTP
+function disconnectSFTP() {
+    sftpConnected = false;
+    sftpFiles = [];
+    
+    const connectionStatus = document.getElementById('sftp_connection_status');
+    const filesSection = document.getElementById('sftp_files_section');
+    const connectBtn = document.getElementById('connect_sftp_btn');
+    const statusMessage = document.getElementById('sftp_status_message');
+    
+    connectionStatus.className = 'badge bg-secondary';
+    connectionStatus.innerHTML = '<i class="fas fa-plug me-1"></i>Disconnected';
+    
+    filesSection.style.display = 'none';
+    statusMessage.style.display = 'none';
+    
+    connectBtn.disabled = false;
+    connectBtn.innerHTML = '<i class="fas fa-plug me-2"></i>Connect to SFTP Server';
+}
+
+// Refresh SFTP files
+async function refreshSFTPFiles() {
+    if (!sftpConnected) {
+        return;
+    }
+    
+    const refreshBtn = document.getElementById('refresh_sftp_btn');
+    const originalText = refreshBtn.innerHTML;
+    
+    refreshBtn.disabled = true;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+    
+    try {
+        const response = await fetch('/api/sftp/discover-files', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            sftpFiles = data.files || [];
+            sftpFiles.sort((a, b) => new Date(b.modified_time) - new Date(a.modified_time));
+            sftpFiles = sftpFiles.slice(0, 30);
+            renderSFTPFiles();
+            showToast('File list refreshed', 'success');
+        } else {
+            throw new Error(data.error || 'Refresh failed');
+        }
+    } catch (error) {
+        console.error('Refresh error:', error);
+        showToast(`Refresh failed: ${error.message}`, 'error');
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalText;
+    }
+}
+
+// Helper: Get file icon based on filename
+function getFileIcon(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const iconMap = {
+        'txt': 'fas fa-file-alt',
+        'csv': 'fas fa-file-csv',
+        'tsv': 'fas fa-file-alt',
+        'xlsx': 'fas fa-file-excel',
+        'xls': 'fas fa-file-excel',
+        'zip': 'fas fa-file-archive',
+        'pdf': 'fas fa-file-pdf',
+        'json': 'fas fa-file-code',
+        'xml': 'fas fa-file-code'
+    };
+    return iconMap[ext] || 'fas fa-file';
+}
+
+// Helper: Format file size
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+// Helper: Format date/time
+function formatDateTime(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now - date;
+    const hours = diff / (1000 * 60 * 60);
+    
+    if (hours < 24) {
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' (today)';
+    } else if (hours < 48) {
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ' (yesterday)';
+    } else {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + 
+               ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
+}
+
+// Helper: Escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Function to format time ago
+function getTimeAgo(isoTimestamp) {
+    if (!isoTimestamp) return 'Never';
+    
+    const now = new Date();
+    const syncTime = new Date(isoTimestamp);
+    const diffMs = now - syncTime;
+    const diffMinutes = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
+    
+    if (diffMinutes < 1) {
+        return 'just now';
+    } else if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+}
+
+// Function to update last sync time display
+function updateLastSyncTime(syncTime) {
+    const lastSyncEl = document.getElementById('lastSyncTime');
+    const lastSyncValueEl = document.getElementById('lastSyncTimeValue');
+    
+    if (syncTime && lastSyncEl && lastSyncValueEl) {
+        lastSyncValueEl.textContent = getTimeAgo(syncTime);
+        lastSyncEl.style.display = 'inline';
+    } else if (lastSyncEl) {
+        lastSyncEl.style.display = 'none';
+    }
+}
+
+// Function to load cached SFTP data on page load
+async function loadCachedSftpData() {
+    try {
+        const response = await fetch('/api/sftp/last-sync');
+        const data = await response.json();
+        
+        if (data.success && data.sync_time) {
+            sftpConnected = true;
+            sftpFiles = data.files || [];
+            
+            updateLastSyncTime(data.sync_time);
+            
+            // Update table in place with cached SFTP data (no reload on initial load)
+            // Only update if files are already loaded
+            if (allFiles && allFiles.length > 0) {
+                await updateTableWithSftpFiles(sftpFiles);
+            }
+        }
+    } catch (error) {
+        console.error('[loadCachedSftpData] Error loading cached data:', error);
+    }
+}
+
+// Function to format time ago
+function getTimeAgo(isoTimestamp) {
+    if (!isoTimestamp) return 'Never';
+    
+    const now = new Date();
+    const syncTime = new Date(isoTimestamp);
+    const diffMs = now - syncTime;
+    const diffMinutes = Math.round(diffMs / 60000);
+    const diffHours = Math.round(diffMs / 3600000);
+    const diffDays = Math.round(diffMs / 86400000);
+    
+    if (diffMinutes < 1) {
+        return 'just now';
+    } else if (diffMinutes < 60) {
+        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+    } else if (diffHours < 24) {
+        return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+    } else {
+        return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
+    }
+}
+
+// Function to update last sync time display
+function updateLastSyncTime(syncTime) {
+    const lastSyncEl = document.getElementById('lastSyncTime');
+    const lastSyncValueEl = document.getElementById('lastSyncTimeValue');
+    
+    if (syncTime && lastSyncEl && lastSyncValueEl) {
+        lastSyncValueEl.textContent = getTimeAgo(syncTime);
+        lastSyncEl.style.display = 'inline';
+    } else if (lastSyncEl) {
+        lastSyncEl.style.display = 'none';
+    }
+}
+
+// Function to load cached SFTP data on page load
+async function loadCachedSftpData() {
+    try {
+        const response = await fetch('/api/sftp/last-sync');
+        const data = await response.json();
+        
+        if (data.success && data.sync_time) {
+            sftpConnected = true;
+            sftpFiles = data.files || [];
+            
+            if (typeof updateLastSyncTime === 'function') {
+                updateLastSyncTime(data.sync_time);
+            }
+            
+            // Update table in place with cached SFTP data (no reload on initial load)
+            // Only update if files are already loaded
+            if (allFiles && allFiles.length > 0) {
+                await updateTableWithSftpFiles(sftpFiles);
+            }
+        }
+    } catch (error) {
+        console.error('[loadCachedSftpData] Error loading cached data:', error);
+    }
+}
+
+// Helper: Show toast notification
+function showToast(message, type = 'info') {
+    const alertClass = {
+        'success': 'alert-success',
+        'error': 'alert-danger',
+        'warning': 'alert-warning',
+        'info': 'alert-info'
+    }[type] || 'alert-info';
+    
+    const icon = {
+        'success': 'fa-check-circle',
+        'error': 'fa-exclamation-circle',
+        'warning': 'fa-exclamation-triangle',
+        'info': 'fa-info-circle'
+    }[type] || 'fa-info-circle';
+    
+    const toast = document.createElement('div');
+    toast.className = `alert ${alertClass} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.style.minWidth = '300px';
+    toast.innerHTML = `
+        <i class="fas ${icon} me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+// Event Listeners - Only attach if elements exist (for backward compatibility)
+const oldConnectBtn = document.getElementById('connect_sftp_btn');
+const oldDisconnectBtn = document.getElementById('disconnect_sftp_btn');
+const oldRefreshBtn = document.getElementById('refresh_sftp_btn');
+const oldDownloadBtn = document.getElementById('download_selected_sftp_btn');
+const oldSelectAllCheckbox = document.getElementById('select_all_sftp_files');
+
+if (oldConnectBtn) oldConnectBtn.addEventListener('click', connectToSFTP);
+if (oldDisconnectBtn) oldDisconnectBtn.addEventListener('click', disconnectSFTP);
+if (oldRefreshBtn) oldRefreshBtn.addEventListener('click', refreshSFTPFiles);
+if (oldDownloadBtn) oldDownloadBtn.addEventListener('click', () => downloadSFTPFiles());
+
+// Select all/none checkboxes
+if (oldSelectAllCheckbox) {
+    oldSelectAllCheckbox.addEventListener('change', function() {
+        document.querySelectorAll('.sftp-file-checkbox').forEach(cb => cb.checked = this.checked);
+        updateSFTPSelectedCount();
+    });
+}
+
+// Check SFTP settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const settingsCheck = document.getElementById('sftp_settings_status');
+    if (settingsCheck) {
+        checkSFTPSettings();
+    }
+});
+
+// ============================================================================
+// AUTOMATED SYNC FUNCTIONS
+// ============================================================================
+
+async function loadAutoSyncConfig() {
+    try {
+        const response = await fetch('/api/automated-sync/config');
+        const data = await response.json();
+        
+        if (data.success) {
+            const autoSyncCard = document.getElementById('autoSyncCard');
+            const autoSyncEnabled = document.getElementById('autoSyncEnabled');
+            const intervalSection = document.getElementById('autoSyncIntervalSection');
+            
+            // Update toggle
+            autoSyncEnabled.checked = data.enabled;
+            
+            // Update interval
+            document.getElementById('autoSyncInterval').value = data.interval_minutes;
+            
+            // Update card appearance based on enabled status
+            if (data.enabled) {
+                autoSyncCard.classList.remove('disabled');
+                autoSyncCard.classList.add('enabled');
+                intervalSection.style.display = 'block';
+            } else {
+                autoSyncCard.classList.remove('enabled');
+                autoSyncCard.classList.add('disabled');
+                intervalSection.style.display = 'none';
+            }
+            
+            // Update statistics
+            if (data.last_run) {
+                const lastRun = new Date(data.last_run);
+                document.getElementById('autoSyncLastRun').textContent = lastRun.toLocaleString();
+            } else {
+                document.getElementById('autoSyncLastRun').textContent = 'Never';
+            }
+            
+            if (data.next_run) {
+                const nextRun = new Date(data.next_run);
+                document.getElementById('autoSyncNextRun').textContent = nextRun.toLocaleString();
+            } else {
+                document.getElementById('autoSyncNextRun').textContent = '-';
+            }
+            
+            if (data.updated_by) {
+                document.getElementById('autoSyncUpdatedBy').textContent = data.updated_by;
+            } else {
+                document.getElementById('autoSyncUpdatedBy').textContent = '-';
+            }
+        } else {
+            showError('Failed to load automated sync configuration');
+        }
+    } catch (error) {
+        console.error('Error loading automated sync config:', error);
+        showError('Failed to load automated sync configuration');
+    }
+}
+
+async function saveAutoSyncConfig() {
+    try {
+        const enabled = document.getElementById('autoSyncEnabled').checked;
+        const interval = document.getElementById('autoSyncInterval').value;
+        
+        const formData = new FormData();
+        formData.append('enabled', enabled);
+        formData.append('interval_minutes', interval);
+        
+        const response = await fetch('/api/automated-sync/config', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess('Automated sync configuration saved successfully');
+            // Reload config to update UI
+            await loadAutoSyncConfig();
+        } else {
+            showError('Failed to save configuration: ' + (data.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error saving automated sync config:', error);
+        showError('Failed to save automated sync configuration');
+    }
+}
+
+</script>
+{% endblock %}

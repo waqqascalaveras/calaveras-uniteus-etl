@@ -1,0 +1,302 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Security Settings
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for security configuration, PHI hashing settings,
+    and security health checks.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-shield-alt me-2"></i>Security Health Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Security Status Table -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Security Controls Status</h5>
+                    <button class="btn btn-sm btn-primary" onclick="refreshSecurityCheck()">
+                        <i class="fas fa-sync me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="securityStatusTable">
+                        <thead>
+                            <tr>
+                                <th style="padding: 15px; width: 300px;">Control</th>
+                                <th style="padding: 15px; width: 120px;">Status</th>
+                                <th style="padding: 15px;">Details</th>
+                                <th style="padding: 15px; width: 100px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="securityTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Loading security status...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HIPAA Compliance Table -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">HIPAA Security Rule Compliance</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="padding: 15px; width: 150px;">Requirement</th>
+                                <th style="padding: 15px;">Description</th>
+                                <th style="padding: 15px; width: 120px;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hipaaTableBody">
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Loading compliance status...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recommendations -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom">
+                <h5 class="mb-0">Recommendations</h5>
+            </div>
+            <div class="card-body" id="recommendationsBody">
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Loading recommendations...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadSecurityStatus();
+});
+
+async function loadSecurityStatus() {
+    try {
+        const response = await fetch('/api/admin/security/health-check');
+        const data = await response.json();
+        
+        if (data.success) {
+            displaySecurityStatus(data.checks);
+            displayHIPAACompliance(data.hipaa_compliance);
+            displayRecommendations(data.recommendations);
+        } else {
+            showError('Failed to load security status');
+        }
+    } catch (error) {
+        console.error('Error loading security status:', error);
+        showError('Error loading security status: ' + error.message);
+    }
+}
+
+function displaySecurityStatus(checks) {
+    const tbody = document.getElementById('securityTableBody');
+    tbody.innerHTML = '';
+    
+    const controls = [
+        { key: 'https_enabled', name: 'HTTPS/SSL Encryption', critical: true },
+        { key: 'default_password', name: 'Default Admin Password', critical: true },
+        { key: 'phi_hash_salt', name: 'PHI Hash Salt', critical: true },
+        { key: 'csrf_protection', name: 'CSRF Protection', critical: true },
+        { key: 'session_security', name: 'Session Security', critical: false },
+        { key: 'audit_logging', name: 'Audit Logging', critical: false },
+        { key: 'password_policy', name: 'Password Policy', critical: false },
+        { key: 'ip_restrictions', name: 'IP Restrictions', critical: false }
+    ];
+    
+    controls.forEach(control => {
+        const check = checks[control.key] || { status: 'unknown', message: 'Status unavailable' };
+        const tr = document.createElement('tr');
+        
+        // Control name
+        const nameTd = document.createElement('td');
+        nameTd.style.padding = '15px';
+        nameTd.innerHTML = control.name + (control.critical ? ' <span class="badge bg-danger ms-2">Critical</span>' : '');
+        tr.appendChild(nameTd);
+        
+        // Status
+        const statusTd = document.createElement('td');
+        statusTd.style.padding = '15px';
+        statusTd.innerHTML = getStatusBadge(check.status);
+        tr.appendChild(statusTd);
+        
+        // Details
+        const detailsTd = document.createElement('td');
+        detailsTd.style.padding = '15px';
+        detailsTd.textContent = check.message;
+        tr.appendChild(detailsTd);
+        
+        // Action
+        const actionTd = document.createElement('td');
+        actionTd.style.padding = '15px';
+        if (check.status === 'fail' || check.status === 'warning') {
+            actionTd.innerHTML = '<button class="btn btn-sm btn-outline-primary" onclick="handleFix(\'' + control.key + '\')">Fix</button>';
+        } else {
+            actionTd.innerHTML = '<span class="text-muted">—</span>';
+        }
+        tr.appendChild(actionTd);
+        
+        tbody.appendChild(tr);
+    });
+}
+
+function displayHIPAACompliance(compliance) {
+    const tbody = document.getElementById('hipaaTableBody');
+    
+    if (!compliance || compliance.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">No compliance data available</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    compliance.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        const reqTd = document.createElement('td');
+        reqTd.style.padding = '15px';
+        reqTd.textContent = item.requirement;
+        tr.appendChild(reqTd);
+        
+        const descTd = document.createElement('td');
+        descTd.style.padding = '15px';
+        descTd.textContent = item.description;
+        tr.appendChild(descTd);
+        
+        const statusTd = document.createElement('td');
+        statusTd.style.padding = '15px';
+        statusTd.innerHTML = item.compliant ? 
+            '<span class="badge bg-success">Compliant</span>' :
+            '<span class="badge bg-danger">Non-Compliant</span>';
+        tr.appendChild(statusTd);
+        
+        tbody.appendChild(tr);
+    });
+}
+
+function displayRecommendations(recommendations) {
+    const container = document.getElementById('recommendationsBody');
+    
+    if (!recommendations || recommendations.length === 0) {
+        container.innerHTML = '<div class="alert alert-success mb-0">No recommendations at this time.</div>';
+        return;
+    }
+    
+    let html = '<div class="list-group list-group-flush">';
+    
+    recommendations.forEach(rec => {
+        const priorityClass = rec.priority === 'critical' ? 'danger' : rec.priority === 'high' ? 'warning' : 'info';
+        
+        html += `
+            <div class="list-group-item border-start border-3 border-${priorityClass} mb-2">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${rec.title}</h6>
+                        <p class="mb-1 text-muted">${rec.description}</p>
+                        ${rec.action ? '<small class="text-muted"><strong>Action:</strong> ' + rec.action + '</small>' : ''}
+                    </div>
+                    <span class="badge bg-${priorityClass} ms-3">${rec.priority.toUpperCase()}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'pass': '<span class="badge bg-success">Pass</span>',
+        'warning': '<span class="badge bg-warning">Warning</span>',
+        'fail': '<span class="badge bg-danger">Fail</span>',
+        'unknown': '<span class="badge bg-secondary">Unknown</span>'
+    };
+    return badges[status] || badges['unknown'];
+}
+
+function handleFix(controlKey) {
+    const actions = {
+        'https_enabled': '/admincp/config',
+        'default_password': '/settings',
+        'phi_hash_salt': '/admincp/config',
+        'csrf_protection': '/admincp/security',
+        'session_security': '/admincp/config',
+        'audit_logging': '/admincp/audit',
+        'password_policy': '/admincp/config',
+        'ip_restrictions': '/admincp/config'
+    };
+    
+    if (actions[controlKey]) {
+        window.location.href = actions[controlKey];
+    }
+}
+
+async function refreshSecurityCheck() {
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+    
+    try {
+        await loadSecurityStatus();
+    } catch (error) {
+        showError('Error refreshing security check');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+
+function showError(message) {
+    document.getElementById('securityTableBody').innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center text-danger py-3">
+                <i class="fas fa-exclamation-triangle me-2"></i>${message}
+            </td>
+        </tr>
+    `;
+}
+</script>
+
+{% endblock %}

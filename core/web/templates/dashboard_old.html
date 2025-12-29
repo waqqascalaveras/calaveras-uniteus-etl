@@ -1,0 +1,338 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Legacy Dashboard Page (Archived)
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Legacy dashboard page (archived). This is an older version of the dashboard
+    kept for reference purposes.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Smooth transitions for dashboard updates */
+#totalRecords, #activeTables, #filesProcessed, #dbSize {
+    transition: opacity 0.3s ease-in-out;
+}
+
+.dashboard-updating {
+    opacity: 0.6;
+}
+
+/* Smooth progress bar transitions */
+#jobProgress {
+    transition: width 0.5s ease-in-out;
+}
+</style>
+
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>Calaveras County ETL Dashboard
+        </h1>
+        <p class="lead text-muted">UniteUs Data Integration Pipeline</p>
+    </div>
+</div>
+
+<!-- System Status Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">Total Records</h5>
+                        <h3 class="mb-0" id="totalRecords">-</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-database fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">Active Tables</h5>
+                        <h3 class="mb-0" id="activeTables">-</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-table fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">Files Processed</h5>
+                        <h3 class="mb-0" id="filesProcessed">-</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-1">DB Size (MB)</h5>
+                        <h3 class="mb-0" id="dbSize">-</h3>
+                    </div>
+                    <div class="ms-3">
+                        <i class="fas fa-hdd fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Processing History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Processing History
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="processingHistoryLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                
+                <div id="processingHistoryContent" class="d-none">
+                    <div class="table-responsive">
+                        <table id="processingHistoryTable" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Type</th>
+                                    <th>Records Processed</th>
+                                    <th>Records Inserted</th>
+                                    <th>Records Updated</th>
+                                    <th>Status</th>
+                                    <th>Processing Time</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="processingHistoryEmpty" class="text-center text-muted py-3 d-none">
+                    <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                    <p class="mb-0">No processing history available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let refreshInterval;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial load with loading spinners
+    loadDashboardData();
+    loadProcessingHistory(true); // Show loading spinner on initial load
+    startAutoRefresh();
+});
+
+let dashboardErrorShown = false;
+
+async function loadDashboardData() {
+    try {
+        // Load dashboard stats
+        const statsResponse = await fetch('/api/analytics/dashboard-stats');
+        
+        if (!statsResponse.ok) {
+            throw new Error(`HTTP ${statsResponse.status}`);
+        }
+        
+        const stats = await statsResponse.json();
+        
+        updateDashboardStats(stats);
+        
+        // Load processing history (without showing loading spinner on refresh)
+        await loadProcessingHistory(false);
+        
+        // Reset error flag on success
+        dashboardErrorShown = false;
+        
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        
+        // Only show error once
+        if (!dashboardErrorShown) {
+            dashboardErrorShown = true;
+            
+            // Check if it's a network error (server down)
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                showError('Cannot connect to server. Please ensure the server is running.', 'Connection Error');
+            } else {
+                showError('Failed to load dashboard data: ' + error.message, 'Dashboard Error');
+            }
+        }
+    }
+}
+
+function updateDashboardStats(stats) {
+    // Track which stats actually changed
+    const updates = [];
+    
+    const totalRecords = stats.database.total_records.toLocaleString();
+    const activeTables = String(stats.database.total_tables);
+    const filesProcessed = String(stats.etl.total_files_processed);
+    const dbSize = String(Math.round(stats.database.database_size_mb * 100) / 100);
+    
+    const totalRecordsEl = document.getElementById('totalRecords');
+    const activeTablesEl = document.getElementById('activeTables');
+    const filesProcessedEl = document.getElementById('filesProcessed');
+    const dbSizeEl = document.getElementById('dbSize');
+    
+    // Check which values changed
+    if (totalRecordsEl.textContent !== totalRecords) {
+        updates.push({ element: totalRecordsEl, value: totalRecords });
+    }
+    if (activeTablesEl.textContent !== activeTables) {
+        updates.push({ element: activeTablesEl, value: activeTables });
+    }
+    if (filesProcessedEl.textContent !== filesProcessed) {
+        updates.push({ element: filesProcessedEl, value: filesProcessed });
+    }
+    if (dbSizeEl.textContent !== dbSize) {
+        updates.push({ element: dbSizeEl, value: dbSize });
+    }
+    
+    // Only animate if there are actual changes
+    if (updates.length > 0) {
+        // Add smooth transition effect to changed elements
+        updates.forEach(({ element }) => {
+            element.classList.add('dashboard-updating');
+        });
+        
+        // Update values after a brief moment
+        setTimeout(() => {
+            updates.forEach(({ element, value }) => {
+                element.textContent = value;
+                element.classList.remove('dashboard-updating');
+            });
+        }, 150);
+    }
+}
+
+async function loadProcessingHistory(showLoading = true) {
+    const loadingDiv = document.getElementById('processingHistoryLoading');
+    const contentDiv = document.getElementById('processingHistoryContent');
+    const emptyDiv = document.getElementById('processingHistoryEmpty');
+    
+    try {
+        // Only show loading spinner on initial load, not on refresh
+        if (showLoading) {
+            loadingDiv.classList.remove('d-none');
+            contentDiv.classList.add('d-none');
+            emptyDiv.classList.add('d-none');
+        }
+        
+        const response = await fetch('/api/etl/processing-history?limit=10');
+        const data = await response.json();
+        
+        loadingDiv.classList.add('d-none');
+        
+        if (data.success && data.data && data.data.length > 0) {
+            const tbody = document.querySelector('#processingHistoryTable tbody');
+            tbody.innerHTML = '';
+            
+            data.data.forEach(record => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>${record.file_name || 'N/A'}</td>
+                    <td><span class="badge bg-secondary">${record.file_type || 'Unknown'}</span></td>
+                    <td>${(record.records_processed || 0).toLocaleString()}</td>
+                    <td class="text-success fw-bold">${(record.records_inserted || 0).toLocaleString()}</td>
+                    <td class="text-primary fw-bold">${(record.records_updated || 0).toLocaleString()}</td>
+                    <td><span class="badge bg-${getStatusColor(record.status)}">${record.status || 'Unknown'}</span></td>
+                    <td>${record.processing_time_seconds ? record.processing_time_seconds + 's' : 'N/A'}</td>
+                    <td>${record.processed_at ? new Date(record.processed_at).toLocaleString() : 'N/A'}</td>
+                `;
+            });
+            
+            contentDiv.classList.remove('d-none');
+        } else {
+            emptyDiv.classList.remove('d-none');
+        }
+        
+    } catch (error) {
+        console.error('Error loading processing history:', error);
+        loadingDiv.classList.add('d-none');
+        emptyDiv.classList.remove('d-none');
+    }
+}
+
+function getStatusColor(status) {
+    switch (status?.toLowerCase()) {
+        case 'completed':
+        case 'success':
+            return 'success';
+        case 'running':
+        case 'in_progress':
+            return 'primary';
+        case 'failed':
+        case 'error':
+            return 'danger';
+        case 'cancelled':
+            return 'warning';
+        default:
+            return 'secondary';
+    }
+}
+
+function startAutoRefresh() {
+    // Clear any existing interval to prevent duplicates
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+    // Refresh every 30 seconds (less intrusive than 10 seconds)
+    refreshInterval = setInterval(loadDashboardData, 30000);
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+}
+
+// Stop auto-refresh when page is hidden
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        stopAutoRefresh();
+    } else {
+        startAutoRefresh();
+    }
+});
+</script>
+{% endblock %}

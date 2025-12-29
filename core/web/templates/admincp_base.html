@@ -1,0 +1,1234 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Base Template
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Base template for admin control panel pages with specialized navigation
+    and layout for administrative functions.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Admin sidebar navigation - Using Bootstrap offcanvas */
+    .admin-sidebar {
+        background: #2d3748;
+        min-height: calc(100vh - 56px);
+        padding: 0;
+    }
+    
+    .admin-sidebar .nav-link {
+        color: #e2e8f0;
+        padding: 8px 16px;
+        border-left: 3px solid transparent;
+        transition: all 0.2s ease-in-out;
+        font-size: 12px;
+    }
+    
+    .admin-sidebar .nav-link:hover {
+        background: #4a5568;
+        color: white;
+        transform: translateX(4px);
+        border-left-color: #667eea;
+    }
+    
+    .admin-sidebar .nav-link.active {
+        background: #4a5568;
+        border-left-color: #667eea;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .admin-sidebar .nav-link i {
+        width: 18px;
+        margin-right: 8px;
+        font-size: 11px;
+    }
+    
+    /* Bootstrap collapse chevron rotation */
+    .admin-sidebar [data-bs-toggle="collapse"] .fa-chevron-right {
+        transition: transform 0.2s;
+    }
+    
+    /* When expanded (aria-expanded="true"), rotate to point down */
+    .admin-sidebar [data-bs-toggle="collapse"][aria-expanded="true"] .fa-chevron-right {
+        transform: rotate(90deg);
+    }
+    
+    .admin-content {
+        padding: 0;
+        background: #f7fafc;
+        min-height: calc(100vh - 56px);
+    }
+    
+    .admin-header {
+        background: white;
+        padding: 16px 24px;
+        margin: 0 0 20px 0;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    /* Reduce top padding in content area */
+    .admin-content > div {
+        padding: 16px 24px !important;
+    }
+    
+    /* Mobile sidebar toggle button */
+    .admin-sidebar-toggle {
+        position: fixed;
+        top: 64px; /* Account for sticky navbar */
+        left: 10px;
+        z-index: 1040; /* Below offcanvas (1050) but above navbar (1030) */
+        background: #2d3748;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        display: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    @media (max-width: 991.98px) {
+        .admin-sidebar-toggle {
+            display: block;
+        }
+        .admin-content {
+            margin-left: 0 !important;
+        }
+        /* Hide desktop sidebar on mobile */
+        .admin-sidebar.d-none.d-md-block {
+            display: none !important;
+        }
+    }
+    
+    @media (min-width: 992px) {
+        /* Desktop: fixed sidebar with margin offset for content */
+        .admin-content {
+            margin-left: 16.666667% !important;
+        }
+    }
+    
+    /* Nav pill badges */
+    .nav-pill {
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 600;
+        margin-left: 6px;
+        line-height: 1.4;
+        min-width: 20px;
+        text-align: center;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .nav-link:hover .nav-pill {
+        transform: scale(1.1);
+    }
+    
+    /* Clean table hover - only background color change, no layout shifts */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+    }
+    
+    /* Ensure table stays within container - no horizontal scrollbars */
+    .table-responsive {
+        overflow-x: hidden;
+        overflow-y: visible;
+    }
+    
+    .nav-pill.number {
+        background: #4299e1;
+        color: white;
+    }
+    
+    .nav-pill.status-on {
+        background: #48bb78;
+        color: white;
+    }
+    
+    .nav-pill.status-off {
+        background: #a0aec0;
+        color: white;
+    }
+    
+    .nav-pill.loading {
+        background: #cbd5e0;
+        color: #718096;
+    }
+    
+    /* Smooth transitions for pill updates */
+    .nav-pill {
+        transition: opacity 0.2s ease-in-out;
+    }
+    
+    /* Save buttons bar */
+    .save-buttons-bar {
+        position: sticky;
+        top: 56px;
+        z-index: 1000;
+        background: white;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 12px 24px;
+        margin: -32px -32px 24px -32px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .save-buttons-bar.visible {
+        display: flex;
+    }
+    
+    .save-buttons-bar .unsaved-indicator {
+        display: flex;
+        align-items: center;
+        color: #e53e3e;
+        font-weight: 500;
+        font-size: 14px;
+    }
+    
+    .save-buttons-bar .save-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .save-buttons-bar-bottom {
+        position: sticky;
+        bottom: 0;
+        z-index: 1000;
+        background: white;
+        border-top: 2px solid #e2e8f0;
+        padding: 12px 24px;
+        margin: 24px -32px -32px -32px;
+        box-shadow: 0 -2px 4px rgba(0,0,0,0.05);
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .save-buttons-bar-bottom.visible {
+        display: flex;
+    }
+</style>
+
+<script>
+// Sections are now expanded by default, but ensure they stay expanded if on a relevant page
+document.addEventListener('DOMContentLoaded', function() {
+    const activePage = '{{ active_page }}';
+    
+    // Sections are expanded by default now, but ensure aria-expanded is set correctly
+    // Bootstrap will handle the rest automatically
+    if (['audit', 'siem', 'logging_windows'].includes(activePage)) {
+        const loggingToggle = document.querySelector('[href="#loggingSection"]');
+        const loggingToggleMobile = document.querySelector('[href="#loggingSectionMobile"]');
+        if (loggingToggle) loggingToggle.setAttribute('aria-expanded', 'true');
+        if (loggingToggleMobile) loggingToggleMobile.setAttribute('aria-expanded', 'true');
+    }
+    if (['database', 'schema'].includes(activePage)) {
+        const databaseToggle = document.querySelector('[href="#databaseSection"]');
+        const databaseToggleMobile = document.querySelector('[href="#databaseSectionMobile"]');
+        if (databaseToggle) databaseToggle.setAttribute('aria-expanded', 'true');
+        if (databaseToggleMobile) databaseToggleMobile.setAttribute('aria-expanded', 'true');
+    }
+    
+    // Ensure offcanvas links work properly - close offcanvas on link click
+    // Wait for Bootstrap to be available
+    function setupOffcanvasLinks() {
+        if (typeof bootstrap === 'undefined') {
+            // Bootstrap not loaded yet, try again after a short delay
+            setTimeout(setupOffcanvasLinks, 100);
+            return;
+        }
+        
+        const offcanvasElement = document.getElementById('adminSidebar');
+        if (offcanvasElement) {
+            const offcanvasLinks = offcanvasElement.querySelectorAll('a.offcanvas-link[href]');
+            offcanvasLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Close the offcanvas before navigation
+                    try {
+                        const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
+                        if (offcanvas) {
+                            // Hide the offcanvas immediately
+                            offcanvas.hide();
+                        }
+                    } catch (err) {
+                        // If Bootstrap isn't available, just navigate normally
+                        console.warn('Bootstrap offcanvas not available:', err);
+                    }
+                    // Navigation will proceed normally
+                });
+            });
+        }
+    }
+    
+    // Setup offcanvas links when DOM is ready
+    setupOffcanvasLinks();
+    
+    // Restore cached pills immediately for smooth UX
+    restoreCachedPills();
+    
+    // Only load nav pills if we're on an authenticated AdminCP page
+    // Check if we're on a page that requires authentication (has nav pills)
+    const hasNavPills = document.getElementById('navPillUsers') || 
+                       document.getElementById('navPillSFTP') || 
+                       document.getElementById('navPillAudit');
+    
+    if (hasNavPills) {
+        // Clear any existing interval to prevent duplicates
+        if (navPillsRefreshInterval) {
+            clearInterval(navPillsRefreshInterval);
+            navPillsRefreshInterval = null;
+        }
+        
+        // Load nav pill data in background (with cache check)
+        loadNavPills(false);
+        
+        // Periodically refresh pills in background (every 5 minutes)
+        // Only continue if authenticated and page is visible
+        if (navPillsRefreshInterval) {
+            clearInterval(navPillsRefreshInterval);
+        }
+        navPillsRefreshInterval = setInterval(() => {
+            if (isAuthenticated && !document.hidden) {
+                loadNavPills(false);
+            } else if (!isAuthenticated) {
+                // Stop interval if not authenticated
+                if (navPillsRefreshInterval) {
+                    clearInterval(navPillsRefreshInterval);
+                    navPillsRefreshInterval = null;
+                }
+            }
+            // If page is hidden, skip this cycle (don't poll)
+        }, 300000);
+        
+        // Also refresh when page becomes visible again (if data is stale)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && isAuthenticated) {
+                // Check if cache is stale (older than 2 minutes)
+                const cacheAge = Date.now() - (pillCache.lastUpdate || 0);
+                if (cacheAge > 120000) {
+                    loadNavPills(false);
+                }
+            }
+        });
+        
+        // Cleanup interval on page unload to prevent memory leaks
+        window.addEventListener('beforeunload', function() {
+            if (navPillsRefreshInterval) {
+                clearInterval(navPillsRefreshInterval);
+                navPillsRefreshInterval = null;
+            }
+        });
+    }
+});
+
+// Pill cache for smooth transitions
+const pillCache = {
+    users: null,
+    sftp: null,
+    audit: null,
+    siem: null,
+    windows: null,
+    database: null,
+    schema: null,
+    lastUpdate: null,
+    cacheTimeout: 30000, // 30 seconds cache
+    
+    // Load from sessionStorage on init
+    load() {
+        try {
+            const cached = sessionStorage.getItem('admincp_pill_cache');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                // Only use cache if it's recent (within timeout)
+                const now = Date.now();
+                if (parsed.lastUpdate && (now - parsed.lastUpdate) < this.cacheTimeout) {
+                    Object.assign(this, parsed);
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load pill cache:', e);
+        }
+        return false;
+    },
+    
+    // Save to sessionStorage
+    save() {
+        try {
+            const toSave = {
+                users: this.users,
+                sftp: this.sftp,
+                audit: this.audit,
+                siem: this.siem,
+                windows: this.windows,
+                database: this.database,
+                schema: this.schema,
+                lastUpdate: this.lastUpdate
+            };
+            sessionStorage.setItem('admincp_pill_cache', JSON.stringify(toSave));
+        } catch (e) {
+            console.warn('Failed to save pill cache:', e);
+        }
+    }
+};
+
+// Load cache on page load
+pillCache.load();
+
+// Track authentication state to prevent unnecessary API calls
+let isAuthenticated = true;
+let consecutiveAuthFailures = 0;
+let navPillsRefreshInterval = null; // Store interval ID to prevent duplicates
+
+// Load and update navigation pills (with caching)
+async function loadNavPills(forceRefresh = false) {
+    // Don't load pills if we're not authenticated
+    if (!isAuthenticated) {
+        return;
+    }
+    
+    try {
+        // Check cache first (unless forcing refresh)
+        const now = Date.now();
+        const cacheValid = !forceRefresh && 
+                          pillCache.lastUpdate && 
+                          (now - pillCache.lastUpdate) < pillCache.cacheTimeout;
+        
+        // Show cached values immediately for smooth UX
+        if (cacheValid) {
+            restoreCachedPills();
+        }
+        
+        // Load all data in parallel (in background)
+        const results = await Promise.allSettled([
+            loadUsersPill(forceRefresh),
+            loadSFTPPill(forceRefresh),
+            loadAuditPill(forceRefresh),
+            loadSIEMPill(forceRefresh),
+            loadWindowsPill(forceRefresh),
+            loadDatabasePill(forceRefresh),
+            loadSchemaPill(forceRefresh)
+        ]);
+        
+        // Check if we got authentication errors
+        let hasAuthError = false;
+        results.forEach((result) => {
+            if (result.status === 'rejected' && result.reason && result.reason.status === 401) {
+                hasAuthError = true;
+            }
+        });
+        
+        if (hasAuthError) {
+            consecutiveAuthFailures++;
+            // If we get multiple auth failures, stop trying
+            if (consecutiveAuthFailures >= 3) {
+                isAuthenticated = false;
+                console.debug('User not authenticated, stopping nav pill updates');
+                return;
+            }
+        } else {
+            // Reset failure counter on success
+            consecutiveAuthFailures = 0;
+            // Update cache timestamp and save
+            pillCache.lastUpdate = Date.now();
+            pillCache.save();
+        }
+        
+        // Log non-auth failures only
+        results.forEach((result, index) => {
+            if (result.status === 'rejected' && result.reason && result.reason.status !== 401) {
+                const pillNames = ['users', 'sftp', 'audit', 'siem', 'windows'];
+                console.warn(`Failed to load ${pillNames[index]} pill:`, result.reason);
+            }
+        });
+    } catch (error) {
+        // Don't log errors if we're not authenticated
+        if (error.status !== 401) {
+            console.error('Error loading nav pills:', error);
+        }
+    }
+}
+
+// Global utility function to refresh specific pills after changes
+// Other pages can call: window.refreshNavPill('users') or window.refreshNavPills(['users', 'schema'])
+window.refreshNavPill = function(pillName) {
+    const pillLoadFunctions = {
+        'users': loadUsersPill,
+        'sftp': loadSFTPPill,
+        'audit': loadAuditPill,
+        'siem': loadSIEMPill,
+        'windows': loadWindowsPill,
+        'database': loadDatabasePill,
+        'schema': loadSchemaPill
+    };
+    
+    if (pillLoadFunctions[pillName]) {
+        pillLoadFunctions[pillName](true); // Force refresh
+    } else {
+        console.warn(`Unknown pill name: ${pillName}`);
+    }
+};
+
+window.refreshNavPills = function(pillNames) {
+    if (pillNames && Array.isArray(pillNames)) {
+        // Refresh specific pills
+        pillNames.forEach(name => window.refreshNavPill(name));
+    } else if (pillNames && typeof pillNames === 'string') {
+        // Single pill name passed as string
+        window.refreshNavPill(pillNames);
+    } else {
+        // No parameters - refresh all pills
+        loadNavPills(true);
+    }
+};
+
+// Helper function to update pill (both desktop and mobile versions)
+function updatePill(pillId, mobilePillId, value, className) {
+    const pill = document.getElementById(pillId);
+    const mobilePill = mobilePillId ? document.getElementById(mobilePillId) : null;
+    
+    if (pill) {
+        if (typeof value === 'object') {
+            pill.textContent = value.text;
+            pill.className = value.className;
+        } else {
+            pill.textContent = value;
+            pill.className = className || 'nav-pill number';
+        }
+        pill.style.opacity = '1';
+    }
+    
+    if (mobilePill) {
+        if (typeof value === 'object') {
+            mobilePill.textContent = value.text;
+            mobilePill.className = value.className;
+        } else {
+            mobilePill.textContent = value;
+            mobilePill.className = className || 'nav-pill number';
+        }
+        mobilePill.style.opacity = '1';
+    }
+}
+
+// Restore cached pill values for smooth display
+function restoreCachedPills() {
+    if (pillCache.users !== null) {
+        updatePill('navPillUsers', 'navPillUsersMobile', pillCache.users, 'nav-pill number');
+    }
+    
+    if (pillCache.sftp !== null && pillCache.sftp.text) {
+        updatePill('navPillSFTP', 'navPillSFTPMobile', pillCache.sftp, null);
+    }
+    
+    if (pillCache.audit !== null) {
+        updatePill('navPillAudit', 'navPillAuditMobile', pillCache.audit, 'nav-pill number');
+    }
+    
+    if (pillCache.siem !== null && pillCache.siem.text) {
+        updatePill('navPillSIEM', 'navPillSIEMMobile', pillCache.siem, null);
+    }
+    
+    if (pillCache.windows !== null && pillCache.windows.text) {
+        updatePill('navPillWindows', 'navPillWindowsMobile', pillCache.windows, null);
+    }
+    
+
+    
+    if (pillCache.database !== null) {
+        updatePill('navPillDatabase', 'navPillDatabaseMobile', pillCache.database, null);
+    }
+    
+    if (pillCache.schema !== null) {
+        updatePill('navPillSchema', 'navPillSchemaMobile', pillCache.schema, 'nav-pill number');
+    }
+}
+
+// ============================================================================
+// Form Change Tracking and Save Buttons Management
+// ============================================================================
+
+let formChangeTracker = {
+    forms: new Map(),
+    hasUnsavedChanges: false,
+    originalValues: new Map(),
+    
+    // Initialize tracking for a form
+    init(formId, saveCallback, delay = 500) {
+        // Delay initialization to allow forms to load their values first
+        setTimeout(() => {
+            const form = document.getElementById(formId);
+            if (!form) {
+                console.warn(`Form ${formId} not found for change tracking`);
+                return;
+            }
+            
+            // Store original form values
+            const originalData = this.serializeForm(form);
+            this.originalValues.set(formId, originalData);
+            this.forms.set(formId, { form, saveCallback });
+            
+            // Add change listeners to all form inputs
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                // Skip buttons
+                if (input.type === 'button' || input.type === 'submit') return;
+                
+                input.addEventListener('change', () => this.checkChanges());
+                input.addEventListener('input', () => this.checkChanges());
+            });
+            
+            // Check initial state
+            this.checkChanges();
+        }, delay);
+    },
+    
+    // Serialize form to compare values
+    serializeForm(form) {
+        const formData = new FormData(form);
+        const data = {};
+        for (const [key, value] of formData.entries()) {
+            data[key] = value;
+        }
+        // Also check checkboxes
+        form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            data[cb.id || cb.name] = cb.checked;
+        });
+        return JSON.stringify(data);
+    },
+    
+    // Check if any forms have unsaved changes
+    checkChanges() {
+        let hasChanges = false;
+        
+        for (const [formId, { form }] of this.forms) {
+            const currentData = this.serializeForm(form);
+            const originalData = this.originalValues.get(formId);
+            
+            if (currentData !== originalData) {
+                hasChanges = true;
+                break;
+            }
+        }
+        
+        this.hasUnsavedChanges = hasChanges;
+        this.updateSaveButtons();
+    },
+    
+    // Update save buttons visibility
+    updateSaveButtons() {
+        const topBar = document.getElementById('topSaveBar');
+        const bottomBar = document.getElementById('bottomSaveBar');
+        
+        if (this.hasUnsavedChanges) {
+            topBar?.classList.add('visible');
+            bottomBar?.classList.add('visible');
+        } else {
+            topBar?.classList.remove('visible');
+            bottomBar?.classList.remove('visible');
+        }
+    },
+    
+    // Mark form as saved (reset tracking)
+    markSaved(formId) {
+        const form = this.forms.get(formId)?.form;
+        if (form) {
+            const currentData = this.serializeForm(form);
+            this.originalValues.set(formId, currentData);
+            this.checkChanges();
+        }
+    },
+    
+    // Reset all forms to original values
+    reset() {
+        if (confirm('Are you sure you want to discard all unsaved changes? This will reload the page.')) {
+            location.reload();
+        }
+    }
+};
+
+// Global functions for save buttons
+window.discardChanges = function() {
+    if (confirm('Are you sure you want to discard all unsaved changes?')) {
+        formChangeTracker.reset();
+    }
+};
+
+window.saveAllForms = async function() {
+    // Save all tracked forms
+    for (const [formId, { form, saveCallback }] of formChangeTracker.forms) {
+        if (saveCallback && typeof saveCallback === 'function') {
+            // Use the custom save callback
+            try {
+                await saveCallback();
+            } catch (error) {
+                console.error(`Error saving form ${formId}:`, error);
+            }
+        } else {
+            // Default: trigger form submit
+            form.requestSubmit();
+        }
+    }
+};
+
+// Warn before leaving page with unsaved changes
+window.addEventListener('beforeunload', function(e) {
+    if (formChangeTracker.hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return e.returnValue;
+    }
+});
+
+// Also warn on navigation within the app
+document.addEventListener('DOMContentLoaded', function() {
+    // Intercept all navigation links
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link && link.href && formChangeTracker.hasUnsavedChanges) {
+            // Check if it's an internal navigation link
+            const href = link.getAttribute('href');
+            if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !link.hasAttribute('data-no-warn')) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave this page?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        }
+    });
+});
+
+// Update User Management pill with active user count
+async function loadUsersPill(forceRefresh = false) {
+    // Skip if we have valid cache and not forcing refresh
+    if (!forceRefresh && pillCache.users !== null) {
+        const now = Date.now();
+        if (pillCache.lastUpdate && (now - pillCache.lastUpdate) < pillCache.cacheTimeout) {
+            return; // Cache is still valid
+        }
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/users');
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw { status: 401, message: 'Not authenticated' };
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        const count = data.active || 0;
+        // Update both desktop and mobile pills
+        updatePill('navPillUsers', 'navPillUsersMobile', count, 'nav-pill number');
+        pillCache.users = count;
+        pillCache.lastUpdate = Date.now();
+        pillCache.save();
+    } catch (error) {
+        console.error('Error loading users pill:', error);
+    }
+}
+
+// Update SFTP Integration pill with On/Off status
+async function loadSFTPPill(forceRefresh = false) {
+    // Skip if we have valid cache and not forcing refresh
+    if (!forceRefresh && pillCache.sftp !== null) {
+        const now = Date.now();
+        if (pillCache.lastUpdate && (now - pillCache.lastUpdate) < pillCache.cacheTimeout) {
+            return; // Cache is still valid
+        }
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/settings/sftp');
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw { status: 401, message: 'Not authenticated' };
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        if (data.success && data.settings) {
+            const enabled = data.settings.enabled || false;
+            const text = enabled ? 'On' : 'Off';
+            const className = enabled ? 'nav-pill status-on' : 'nav-pill status-off';
+            
+            // Update both desktop and mobile pills
+            updatePill('navPillSFTP', 'navPillSFTPMobile', { text, className }, null);
+            pillCache.sftp = { text, className };
+            pillCache.lastUpdate = Date.now();
+            pillCache.save();
+        }
+    } catch (error) {
+        console.error('Error loading SFTP pill:', error);
+    }
+}
+
+// Update Audit Log pill with today's event count
+async function loadAuditPill(forceRefresh = false) {
+    // Skip if we have valid cache and not forcing refresh
+    // Note: Audit count changes throughout the day, so we might want to refresh more often
+    // But for smooth UX, we'll still use cache for a short period
+    if (!forceRefresh && pillCache.audit !== null) {
+        const now = Date.now();
+        if (pillCache.lastUpdate && (now - pillCache.lastUpdate) < pillCache.cacheTimeout) {
+            return; // Cache is still valid
+        }
+    }
+    
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        const url = `/api/admin/audit-statistics?start_date=${today}&end_date=${tomorrowStr}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw { status: 401, message: 'Not authenticated' };
+            }
+            const pill = document.getElementById('navPillAudit');
+            if (pill) {
+                pill.textContent = '0';
+                pill.className = 'nav-pill number';
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        const pill = document.getElementById('navPillAudit');
+        
+        if (!pill) {
+            console.warn('Audit pill element not found');
+            return;
+        }
+        
+        if (data.success && data.statistics) {
+            // Get total events for today
+            const count = data.statistics.total_events || 0;
+            
+            // Update both desktop and mobile pills
+            updatePill('navPillAudit', 'navPillAuditMobile', count, 'nav-pill number');
+            pillCache.audit = count;
+            pillCache.lastUpdate = Date.now();
+            pillCache.save();
+        } else {
+            console.error('Audit pill: Invalid response format', data);
+            pill.textContent = '0';
+            pill.className = 'nav-pill number';
+        }
+    } catch (error) {
+        console.error('Error loading audit pill:', error);
+        const pill = document.getElementById('navPillAudit');
+        if (pill) {
+            pill.textContent = '0';
+            pill.className = 'nav-pill number';
+        }
+    }
+}
+
+// Update SIEM Integration pill with On/Off status
+async function loadSIEMPill(forceRefresh = false) {
+    // Skip if we have valid cache and not forcing refresh
+    if (!forceRefresh && pillCache.siem !== null) {
+        const now = Date.now();
+        if (pillCache.lastUpdate && (now - pillCache.lastUpdate) < pillCache.cacheTimeout) {
+            return; // Cache is still valid
+        }
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/settings/siem');
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw { status: 401, message: 'Not authenticated' };
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        if (data.success && data.settings) {
+            const enabled = data.settings.enabled || false;
+            const text = enabled ? 'On' : 'Off';
+            const className = enabled ? 'nav-pill status-on' : 'nav-pill status-off';
+            
+            // Update both desktop and mobile pills
+            updatePill('navPillSIEM', 'navPillSIEMMobile', { text, className }, null);
+            pillCache.siem = { text, className };
+            pillCache.lastUpdate = Date.now();
+            pillCache.save();
+        }
+    } catch (error) {
+        console.error('Error loading SIEM pill:', error);
+    }
+}
+
+// Update Windows Event Log pill with On/Off status
+async function loadWindowsPill(forceRefresh = false) {
+    // Skip if we have valid cache and not forcing refresh
+    if (!forceRefresh && pillCache.windows !== null) {
+        const now = Date.now();
+        if (pillCache.lastUpdate && (now - pillCache.lastUpdate) < pillCache.cacheTimeout) {
+            return; // Cache is still valid
+        }
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/logging/windows/status');
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw { status: 401, message: 'Not authenticated' };
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        if (data.success && data.info) {
+            const enabled = data.info.enabled || false;
+            const text = enabled ? 'On' : 'Off';
+            const className = enabled ? 'nav-pill status-on' : 'nav-pill status-off';
+            
+            // Update both desktop and mobile pills
+            updatePill('navPillWindows', 'navPillWindowsMobile', { text, className }, null);
+            pillCache.windows = { text, className };
+            pillCache.lastUpdate = Date.now();
+            pillCache.save();
+        }
+    } catch (error) {
+        console.error('Error loading Windows pill:', error);
+    }
+}
+
+
+// Update Database pill with database type
+async function loadDatabasePill(forceRefresh = false) {
+    // Skip if we have valid cache and not forcing refresh
+    if (!forceRefresh && pillCache.database !== null) {
+        const now = Date.now();
+        if (pillCache.lastUpdate && (now - pillCache.lastUpdate) < pillCache.cacheTimeout) {
+            return; // Cache is still valid
+        }
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/settings/database');
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw { status: 401, message: 'Not authenticated' };
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        if (data.success && data.settings && data.settings.db_type) {
+            const dbType = data.settings.db_type.toUpperCase();
+            let displayName = dbType;
+            
+            // Friendly names for database types
+            if (dbType === 'SQLITE') displayName = 'SQLite';
+            else if (dbType === 'MSSQL') displayName = 'MS SQL';
+            else if (dbType === 'AZURESQL') displayName = 'Azure';
+            else if (dbType === 'POSTGRESQL') displayName = 'PostgreSQL';
+            else if (dbType === 'MYSQL') displayName = 'MySQL';
+            
+            // Update both desktop and mobile pills
+            updatePill('navPillDatabase', 'navPillDatabaseMobile', displayName, null);
+            pillCache.database = displayName;
+            pillCache.lastUpdate = Date.now();
+            pillCache.save();
+        }
+    } catch (error) {
+        console.error('Error loading database pill:', error);
+    }
+}
+
+// Update Schema pill with error count
+async function loadSchemaPill(forceRefresh = false) {
+    // Skip if we have valid cache and not forcing refresh
+    if (!forceRefresh && pillCache.schema !== null) {
+        const now = Date.now();
+        if (pillCache.lastUpdate && (now - pillCache.lastUpdate) < pillCache.cacheTimeout) {
+            return; // Cache is still valid
+        }
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/schema/errors?resolved=false&limit=1');
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw { status: 401, message: 'Not authenticated' };
+            }
+            return;
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            const count = data.count || 0;
+            
+            // Update both desktop and mobile pills
+            updatePill('navPillSchema', 'navPillSchemaMobile', count, 'nav-pill number');
+            pillCache.schema = count;
+            pillCache.lastUpdate = Date.now();
+            pillCache.save();
+        }
+    } catch (error) {
+        console.error('Error loading schema pill:', error);
+    }
+}
+
+
+</script>
+
+<!-- Mobile Sidebar Toggle Button -->
+<button class="admin-sidebar-toggle" type="button" data-bs-toggle="offcanvas" data-bs-target="#adminSidebar" aria-controls="adminSidebar">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="container-fluid p-0">
+    <div class="row g-0">
+        <!-- Sidebar Navigation - Using Bootstrap Offcanvas for Mobile -->
+        <div class="col-lg-2 col-md-3 d-none d-md-block admin-sidebar" style="position: fixed; top: 56px; bottom: 0; left: 0; overflow-y: auto;">
+            <div class="py-2">
+                <div class="px-3 mb-2">
+                    <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">Admin Control Panel</h6>
+                </div>
+                
+                <nav class="nav flex-column">
+                    <a class="nav-link {% if active_page == 'dashboard' %}active{% endif %}" href="/admincp">
+                        <i class="fas fa-tachometer-alt"></i> Admin Control Panel
+                    </a>
+                    
+                    <!-- Users Section - Using Bootstrap Collapse -->
+                    <div class="px-3 mt-2 mb-1">
+                        <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                            <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#usersSection" role="button" aria-expanded="true" aria-controls="usersSection">
+                                <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> Users
+                            </a>
+                        </h6>
+                    </div>
+                    <div class="collapse show" id="usersSection">
+                        <a class="nav-link {% if active_page == 'users' %}active{% endif %}" href="/admincp/users" style="padding-left: 32px;">
+                            <i class="fas fa-users"></i> User Management
+                            <span class="nav-pill number loading" id="navPillUsers">-</span>
+                        </a>
+                        <a class="nav-link {% if active_page == 'permissions' %}active{% endif %}" href="/admincp/permissions" style="padding-left: 32px;">
+                            <i class="fas fa-key"></i> Permissions
+                        </a>
+                    </div>
+                    
+                    <!-- FTP Section - Using Bootstrap Collapse -->
+                    <div class="px-3 mt-2 mb-1">
+                        <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                            <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#ftpSection" role="button" aria-expanded="true" aria-controls="ftpSection">
+                                <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> FTP
+                            </a>
+                        </h6>
+                    </div>
+                    <div class="collapse show" id="ftpSection">
+                        <a class="nav-link {% if active_page == 'sftp' %}active{% endif %}" href="/admincp/sftp" style="padding-left: 32px;">
+                            <i class="fas fa-cloud-download-alt"></i> SFTP Integration
+                            <span class="nav-pill status-off loading" id="navPillSFTP">-</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Logging Section - Using Bootstrap Collapse -->
+                    <div class="px-3 mt-2 mb-1">
+                        <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                            <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#loggingSection" role="button" aria-expanded="true" aria-controls="loggingSection">
+                                <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> Logging
+                            </a>
+                        </h6>
+                    </div>
+                    <div class="collapse show" id="loggingSection">
+                        <a class="nav-link {% if active_page == 'audit' %}active{% endif %}" href="/admincp/audit" style="padding-left: 32px;">
+                            <i class="fas fa-history"></i> Audit Log
+                            <span class="nav-pill number loading" id="navPillAudit">-</span>
+                        </a>
+                        <a class="nav-link {% if active_page == 'siem' %}active{% endif %}" href="/admincp/logging/siem" style="padding-left: 32px;">
+                            <i class="fas fa-shield-alt"></i> SIEM Integration
+                            <span class="nav-pill status-off loading" id="navPillSIEM">-</span>
+                        </a>
+                        <a class="nav-link {% if active_page == 'logging_windows' %}active{% endif %}" href="/admincp/logging/windows" style="padding-left: 32px;">
+                            <i class="fas fa-windows"></i> Windows Event Log
+                            <span class="nav-pill status-off loading" id="navPillWindows">-</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Database Section - Using Bootstrap Collapse -->
+                    <div class="px-3 mt-2 mb-1">
+                        <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                            <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#databaseSection" role="button" aria-expanded="true" aria-controls="databaseSection">
+                                <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> Database
+                            </a>
+                        </h6>
+                    </div>
+                    <div class="collapse show" id="databaseSection">
+                        <a class="nav-link {% if active_page == 'database' %}active{% endif %}" href="/admincp/database" style="padding-left: 32px;">
+                            <i class="fas fa-cog"></i> Database Settings
+                            <span class="nav-pill loading" id="navPillDatabase" style="background: #4a5568; color: white; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 6px;">-</span>
+                        </a>
+                        <a class="nav-link {% if active_page == 'schema' %}active{% endif %}" href="/admincp/database/schema" style="padding-left: 32px;">
+                            <i class="fas fa-table"></i> Schema
+                            <span class="nav-pill number loading" id="navPillSchema">-</span>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Mobile Offcanvas Sidebar -->
+        <div class="offcanvas offcanvas-start admin-sidebar" tabindex="-1" id="adminSidebar" aria-labelledby="adminSidebarLabel" style="width: 250px;">
+            <div class="offcanvas-header border-bottom border-secondary">
+                <h5 class="offcanvas-title text-white" id="adminSidebarLabel">
+                    <i class="fas fa-cog me-2"></i>Admin Control Panel
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body p-0">
+                <div class="py-2">
+                    <nav class="nav flex-column">
+                        <a class="nav-link offcanvas-link {% if active_page == 'dashboard' %}active{% endif %}" href="/admincp">
+                            <i class="fas fa-tachometer-alt"></i> Admin Control Panel
+                        </a>
+                        
+                        <!-- Users Section - Using Bootstrap Collapse -->
+                        <div class="px-3 mt-2 mb-1">
+                            <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                                <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#usersSectionMobile" role="button" aria-expanded="true" aria-controls="usersSectionMobile">
+                                    <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> Users
+                                </a>
+                            </h6>
+                        </div>
+                        <div class="collapse show" id="usersSectionMobile">
+                            <a class="nav-link offcanvas-link {% if active_page == 'users' %}active{% endif %}" href="/admincp/users" style="padding-left: 32px;">
+                                <i class="fas fa-users"></i> User Management
+                                <span class="nav-pill number loading" id="navPillUsersMobile">-</span>
+                            </a>
+                            <a class="nav-link offcanvas-link {% if active_page == 'permissions' %}active{% endif %}" href="/admincp/permissions" style="padding-left: 32px;">
+                                <i class="fas fa-key"></i> Permissions
+                            </a>
+                        </div>
+                        
+                        <!-- FTP Section - Using Bootstrap Collapse -->
+                        <div class="px-3 mt-2 mb-1">
+                            <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                                <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#ftpSectionMobile" role="button" aria-expanded="true" aria-controls="ftpSectionMobile">
+                                    <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> FTP
+                                </a>
+                            </h6>
+                        </div>
+                        <div class="collapse show" id="ftpSectionMobile">
+                            <a class="nav-link offcanvas-link {% if active_page == 'sftp' %}active{% endif %}" href="/admincp/sftp" style="padding-left: 32px;">
+                                <i class="fas fa-cloud-download-alt"></i> SFTP Integration
+                                <span class="nav-pill status-off loading" id="navPillSFTPMobile">-</span>
+                            </a>
+                        </div>
+                        
+                        <!-- Logging Section - Using Bootstrap Collapse -->
+                        <div class="px-3 mt-2 mb-1">
+                            <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                                <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#loggingSectionMobile" role="button" aria-expanded="true" aria-controls="loggingSectionMobile">
+                                    <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> Logging
+                                </a>
+                            </h6>
+                        </div>
+                        <div class="collapse show" id="loggingSectionMobile">
+                            <a class="nav-link offcanvas-link {% if active_page == 'audit' %}active{% endif %}" href="/admincp/audit" style="padding-left: 32px;">
+                                <i class="fas fa-history"></i> Audit Log
+                                <span class="nav-pill number loading" id="navPillAuditMobile">-</span>
+                            </a>
+                            <a class="nav-link offcanvas-link {% if active_page == 'siem' %}active{% endif %}" href="/admincp/logging/siem" style="padding-left: 32px;">
+                                <i class="fas fa-shield-alt"></i> SIEM Integration
+                                <span class="nav-pill status-off loading" id="navPillSIEMMobile">-</span>
+                            </a>
+                            <a class="nav-link offcanvas-link {% if active_page == 'logging_windows' %}active{% endif %}" href="/admincp/logging/windows" style="padding-left: 32px;">
+                                <i class="fas fa-windows"></i> Windows Event Log
+                                <span class="nav-pill status-off loading" id="navPillWindowsMobile">-</span>
+                            </a>
+                        </div>
+                        
+                        <!-- Database Section - Using Bootstrap Collapse -->
+                        <div class="px-3 mt-2 mb-1">
+                            <h6 class="text-white-50 text-uppercase" style="font-size: 10px; font-weight: 600; letter-spacing: 0.5px;">
+                                <a class="text-white-50 text-decoration-none" data-bs-toggle="collapse" href="#databaseSectionMobile" role="button" aria-expanded="true" aria-controls="databaseSectionMobile">
+                                    <i class="fas fa-chevron-right me-1" style="font-size: 8px;"></i> Database
+                                </a>
+                            </h6>
+                        </div>
+                        <div class="collapse show" id="databaseSectionMobile">
+                            <a class="nav-link offcanvas-link {% if active_page == 'database' %}active{% endif %}" href="/admincp/database" style="padding-left: 32px;">
+                                <i class="fas fa-cog"></i> Database Settings
+                                <span class="nav-pill loading" id="navPillDatabaseMobile" style="background: #4a5568; color: white; font-size: 10px; padding: 2px 6px; border-radius: 3px; margin-left: 6px;">-</span>
+                            </a>
+                            <a class="nav-link offcanvas-link {% if active_page == 'schema' %}active{% endif %}" href="/admincp/database/schema" style="padding-left: 32px;">
+                                <i class="fas fa-table"></i> Schema
+                                <span class="nav-pill number loading" id="navPillSchemaMobile">-</span>
+                            </a>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="col-lg-10 col-md-9 admin-content">
+            <div style="padding: 16px 24px;">
+                <div class="admin-header">
+                <h2 style="font-size: 28px; font-weight: 600; color: #1a202c; margin-bottom: 4px;">
+                    <i class="fas fa-{{ page_icon }} me-2" style="color: #2c5282;"></i>{{ page_title }}
+                </h2>
+                {% if page_description %}
+                <p style="font-size: 14px; color: #718096; margin: 0;">{{ page_description }}</p>
+                {% endif %}
+            </div>
+            
+                <!-- Top Save Buttons Bar (hidden by default, shown when form changes) -->
+                <div class="save-buttons-bar" id="topSaveBar">
+                    <div class="unsaved-indicator">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span>You have unsaved changes</span>
+                    </div>
+                    <div class="save-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="discardChanges()">
+                            <i class="fas fa-times me-1"></i>Discard
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveAllForms()">
+                            <i class="fas fa-save me-1"></i>Save Changes
+                        </button>
+                    </div>
+            </div>
+            
+                <!-- Page-specific content -->
+                {% block admin_content %}{% endblock %}
+                
+                <!-- Bottom Save Buttons Bar (hidden by default, shown when form changes) -->
+                <div class="save-buttons-bar-bottom" id="bottomSaveBar">
+                    <div class="unsaved-indicator">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        <span>You have unsaved changes</span>
+                    </div>
+                    <div class="save-actions">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="discardChanges()">
+                            <i class="fas fa-times me-1"></i>Discard
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="saveAllForms()">
+                            <i class="fas fa-save me-1"></i>Save Changes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

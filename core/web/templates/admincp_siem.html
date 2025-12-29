@@ -1,0 +1,585 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel SIEM Logging
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for configuring SIEM logging, syslog forwarding,
+    and security event management integration.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'siem' %}
+{% set page_title = 'SIEM Integration' %}
+{% set page_icon = 'shield-alt' %}
+{% set page_description = 'Security Information and Event Management Integration' %}
+
+{% block admin_content %}
+
+<!-- SIEM Configuration Card -->
+<div class="card mb-4" id="siemConfigCard" style="border: 2px solid #cbd5e0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: border-color 0.3s;">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-shield-alt me-2" style="color: #2c5282;"></i>SIEM Configuration
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <label class="form-check-label me-2" for="siemEnabled" style="font-weight: 500; font-size: 14px; color: #2d3748; margin: 0; cursor: pointer;">
+                    Enable SIEM
+                </label>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="siemEnabled" style="width: 50px; height: 25px; cursor: pointer;" onchange="toggleSIEM();">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <form id="siemConfigForm">
+            <!-- SIEM Protocol -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                        <i class="fas fa-cog me-1"></i>SIEM Protocol
+                    </label>
+                    <select class="form-select" id="siemProtocol" style="font-size: 14px; padding: 10px;">
+                        <option value="syslog">Syslog (RFC 5424)</option>
+                        <option value="cef">Common Event Format (CEF)</option>
+                        <option value="leef">Log Event Extended Format (LEEF)</option>
+                        <option value="json">JSON over TCP/UDP</option>
+                        <option value="http">HTTP/HTTPS Webhook</option>
+                    </select>
+                    <small class="text-muted">Select the format your SIEM server expects</small>
+                </div>
+            </div>
+
+            <div id="siemSettingsContainer">
+                <!-- Connection Settings -->
+                <h6 class="mb-3" style="color: #1a202c; font-weight: 600;">Connection Settings</h6>
+                
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            SIEM Server Host
+                        </label>
+                        <input type="text" class="form-control" id="siemHost" placeholder="siem.example.com or 192.168.1.100" style="font-size: 14px;">
+                        <small class="text-muted">Hostname or IP address of your SIEM server</small>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            Port
+                        </label>
+                        <input type="number" class="form-control" id="siemPort" placeholder="514" value="514" style="font-size: 14px;">
+                        <small class="text-muted">Default: 514 (Syslog)</small>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            Transport Protocol
+                        </label>
+                        <select class="form-select" id="siemTransport" style="font-size: 14px;">
+                            <option value="udp">UDP (Fast, no guarantee)</option>
+                            <option value="tcp">TCP (Reliable, slower)</option>
+                            <option value="tls">TLS (Encrypted TCP)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            Facility
+                        </label>
+                        <select class="form-select" id="siemFacility" style="font-size: 14px;">
+                            <option value="16">LOCAL0</option>
+                            <option value="17">LOCAL1</option>
+                            <option value="18">LOCAL2</option>
+                            <option value="19">LOCAL3</option>
+                            <option value="20">LOCAL4</option>
+                            <option value="21">LOCAL5</option>
+                            <option value="22">LOCAL6</option>
+                            <option value="23">LOCAL7</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Filtering Options -->
+                <h6 class="mb-3 mt-4" style="color: #1a202c; font-weight: 600;">Event Filtering</h6>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            Minimum Severity Level
+                        </label>
+                        <select class="form-select" id="siemMinSeverity" style="font-size: 14px;">
+                            <option value="debug">Debug (All events)</option>
+                            <option value="info" selected>Info</option>
+                            <option value="warning">Warning</option>
+                            <option value="error">Error</option>
+                            <option value="critical">Critical Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            Event Categories to Forward
+                        </label>
+                        <div style="max-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cat_authentication" checked>
+                                <label class="form-check-label" for="cat_authentication">Authentication</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cat_user_management" checked>
+                                <label class="form-check-label" for="cat_user_management">User Management</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cat_data_access" checked>
+                                <label class="form-check-label" for="cat_data_access">Data Access</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cat_data_export" checked>
+                                <label class="form-check-label" for="cat_data_export">Data Export</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cat_etl" checked>
+                                <label class="form-check-label" for="cat_etl">ETL Operations</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cat_security">
+                                <label class="form-check-label" for="cat_security">Security Events</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="cat_system">
+                                <label class="form-check-label" for="cat_system">System Events</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Options -->
+                <h6 class="mb-3 mt-4" style="color: #1a202c; font-weight: 600;">Advanced Options</h6>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="siemBatchMode" checked>
+                            <label class="form-check-label" for="siemBatchMode">
+                                Batch mode (reduces network traffic)
+                            </label>
+                        </div>
+                        <small class="text-muted">When enabled, events are batched and sent together (only when events occur, not on a fixed schedule)</small>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert alert-info mb-0" style="padding: 8px 12px; font-size: 13px;">
+                            <i class="fas fa-info-circle me-1"></i>
+                            <strong>Note:</strong> PHI data is never included in SIEM logs per HIPAA requirements.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            Application Identifier
+                        </label>
+                        <input type="text" class="form-control" id="siemAppName" value="UniteUs-ETL" style="font-size: 14px;">
+                        <small class="text-muted">How this application appears in SIEM</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748;">
+                            Hostname Override
+                        </label>
+                        <input type="text" class="form-control" id="siemHostnameOverride" placeholder="Leave blank for auto-detect" style="font-size: 14px;">
+                        <small class="text-muted">Custom hostname for syslog messages</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Connection Button -->
+            <div class="d-flex justify-content-end mt-4 mb-3">
+                <button type="button" class="btn btn-primary" onclick="testSIEMConnection()" id="testSIEMBtn">
+                    <i class="fas fa-plug me-1"></i>Test Connection
+                </button>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" onclick="loadSIEMConfig()">
+                    <i class="fas fa-undo me-1"></i>Reset
+                </button>
+                <!-- Save button hidden - using top/bottom save bars instead -->
+                <button type="button" class="btn btn-primary" onclick="saveSIEMConfig()" style="display: none;">
+                    <i class="fas fa-save me-1"></i>Save Configuration
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- SIEM Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div class="card-body">
+                <h3 class="mb-0" style="color: #2c5282;" id="siemEventsSent">0</h3>
+                <small class="text-muted">Events Sent Today</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div class="card-body">
+                <h3 class="mb-0 text-success" id="siemSuccessRate">100%</h3>
+                <small class="text-muted">Success Rate</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div class="card-body">
+                <h3 class="mb-0 text-danger" id="siemFailedEvents">0</h3>
+                <small class="text-muted">Failed Events</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div class="card-body">
+                <h3 class="mb-0 text-info" id="siemLastSent">Never</h3>
+                <small class="text-muted">Last Sent</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SIEM Activity Log -->
+<div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-history me-2" style="color: #2c5282;"></i>Recent SIEM Activity
+            </h5>
+            <button class="btn btn-sm btn-outline-secondary" onclick="refreshSIEMActivity()">
+                <i class="fas fa-sync me-1"></i>Refresh
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead style="background: #f7fafc;">
+                    <tr>
+                        <th style="padding: 12px;">Timestamp</th>
+                        <th style="padding: 12px;">Event Type</th>
+                        <th style="padding: 12px;">Status</th>
+                        <th style="padding: 12px;">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="siemActivityTable">
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">
+                            <i class="fas fa-info-circle me-2"></i>No SIEM activity yet. Enable SIEM logging to start.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load SIEM configuration on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSIEMConfig();
+    loadSIEMStatistics();
+    // Update card style after loading config
+    setTimeout(updateSIEMCardStyle, 100);
+    
+    // Initialize form change tracking (after settings load)
+    setTimeout(() => {
+        if (typeof formChangeTracker !== 'undefined') {
+            formChangeTracker.init('siemConfigForm', async function() {
+                // Custom save callback
+                await saveSIEMConfig();
+            }, 1000);
+        }
+    }, 500);
+});
+
+async function toggleSIEM() {
+    const enabled = document.getElementById('siemEnabled').checked;
+    
+    // Update card style immediately
+    updateSIEMCardStyle();
+    
+    // Save the enabled state
+    try {
+        const formData = new FormData();
+        formData.append('enabled', enabled);
+        formData.append('enable_json_logging', true);
+        formData.append('enable_windows_event_log', false);
+        formData.append('json_log_path', 'data/logs/siem_events.json');
+        formData.append('syslog_enabled', false);
+        formData.append('syslog_host', document.getElementById('siemHost').value || 'localhost');
+        formData.append('syslog_port', parseInt(document.getElementById('siemPort').value) || 514);
+        formData.append('syslog_protocol', 'UDP');
+        formData.append('include_sensitive_data', false);
+        
+        const response = await fetch('/api/settings/siem', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(`SIEM ${enabled ? 'enabled' : 'disabled'} successfully`, 'success');
+            
+            // Update the nav pill immediately
+            if (typeof window.refreshNavPill === 'function') {
+                await window.refreshNavPill('siem');
+            }
+        } else {
+            showToast('Failed to update SIEM: ' + (data.error || 'Unknown error'), 'error');
+            // Revert checkbox on failure
+            document.getElementById('siemEnabled').checked = !enabled;
+            updateSIEMCardStyle();
+        }
+    } catch (error) {
+        console.error('Error toggling SIEM:', error);
+        showToast('Error updating SIEM: ' + error.message, 'error');
+        // Revert checkbox on failure
+        document.getElementById('siemEnabled').checked = !enabled;
+        updateSIEMCardStyle();
+    }
+}
+
+function updateSIEMCardStyle() {
+    const card = document.getElementById('siemConfigCard');
+    const enabledCheckbox = document.getElementById('siemEnabled');
+    if (card && enabledCheckbox) {
+        const enabled = enabledCheckbox.checked;
+        if (enabled) {
+            card.style.borderColor = '#48bb78';
+            card.style.borderWidth = '2px';
+        } else {
+            card.style.borderColor = '#cbd5e0';
+            card.style.borderWidth = '2px';
+        }
+    }
+}
+
+async function loadSIEMConfig() {
+    try {
+        const response = await fetch('/api/admin/siem/config');
+        if (!response.ok) {
+            throw new Error('Failed to load SIEM configuration');
+        }
+        
+        const data = await response.json();
+        
+        // Handle both success and error cases - config is always present now
+        if (data.config) {
+            document.getElementById('siemEnabled').checked = data.config.enabled || false;
+            document.getElementById('siemProtocol').value = data.config.protocol || 'syslog';
+            document.getElementById('siemHost').value = data.config.host || '';
+            document.getElementById('siemPort').value = data.config.port || 514;
+            document.getElementById('siemTransport').value = data.config.transport || 'udp';
+            document.getElementById('siemFacility').value = data.config.facility || '16';
+            document.getElementById('siemMinSeverity').value = data.config.min_severity || 'info';
+            document.getElementById('siemAppName').value = data.config.app_name || 'UniteUs-ETL';
+            document.getElementById('siemHostnameOverride').value = data.config.hostname_override || '';
+            document.getElementById('siemBatchMode').checked = data.config.batch_mode !== false;
+            
+            // Load event categories
+            const categories = data.config.event_categories || [];
+            ['authentication', 'user_management', 'data_access', 'data_export', 'etl', 'security', 'system'].forEach(cat => {
+                const checkbox = document.getElementById(`cat_${cat}`);
+                if (checkbox) {
+                    checkbox.checked = categories.includes(cat) || categories.length === 0;
+                }
+            });
+            
+            updateSIEMCardStyle();
+            
+            // Show warning if there was an error loading from database
+            if (!data.success && data.error) {
+                showToast('Warning: ' + data.error + ' (showing defaults)', 'warning');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading SIEM config:', error);
+        showToast('Failed to load SIEM configuration', 'error');
+    }
+}
+
+async function saveSIEMConfig() {
+    const config = {
+        enabled: document.getElementById('siemEnabled').checked,
+        protocol: document.getElementById('siemProtocol').value,
+        host: document.getElementById('siemHost').value,
+        port: parseInt(document.getElementById('siemPort').value),
+        transport: document.getElementById('siemTransport').value,
+        facility: parseInt(document.getElementById('siemFacility').value),
+        min_severity: document.getElementById('siemMinSeverity').value,
+        app_name: document.getElementById('siemAppName').value,
+        hostname_override: document.getElementById('siemHostnameOverride').value,
+        batch_mode: document.getElementById('siemBatchMode').checked,
+        event_categories: []
+    };
+    
+    // Get selected event categories
+    ['authentication', 'user_management', 'data_access', 'data_export', 'etl', 'security', 'system'].forEach(cat => {
+        const checkbox = document.getElementById(`cat_${cat}`);
+        if (checkbox && checkbox.checked) {
+            config.event_categories.push(cat);
+        }
+    });
+    
+    try {
+        // Save to SIEM settings endpoint (not config endpoint)
+        const formData = new FormData();
+        formData.append('enabled', config.enabled);
+        formData.append('enable_json_logging', true); // Always enabled for JSON logging
+        formData.append('enable_windows_event_log', false);
+        formData.append('json_log_path', 'data/logs/siem_events.json');
+        formData.append('syslog_enabled', false);
+        formData.append('syslog_host', config.host || 'localhost');
+        formData.append('syslog_port', config.port || 514);
+        formData.append('syslog_protocol', config.transport === 'tcp' ? 'TCP' : 'UDP');
+        formData.append('include_sensitive_data', false);
+        
+        const response = await fetch('/api/settings/siem', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to save SIEM configuration');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('SIEM configuration saved successfully', 'success');
+            // Mark form as saved
+            if (typeof formChangeTracker !== 'undefined') {
+                formChangeTracker.markSaved('siemConfigForm');
+            }
+            // Refresh nav pill
+            if (typeof window.refreshNavPill === 'function') {
+                window.refreshNavPill('siem');
+            }
+            updateSIEMCardStyle();
+        } else {
+            throw new Error(data.error || 'Failed to save configuration');
+        }
+    } catch (error) {
+        console.error('Error saving SIEM config:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+async function testSIEMConnection() {
+    const btn = document.getElementById('testSIEMBtn');
+    const originalHtml = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+    
+    try {
+        const response = await fetch('/api/admin/siem/test', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('✅ ' + (data.message || 'SIEM connection test successful!'), 'success');
+        } else {
+            showToast('❌ SIEM connection test failed: ' + (data.error || data.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Error testing SIEM connection:', error);
+        showToast('Error testing SIEM connection: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+
+async function loadSIEMStatistics() {
+    try {
+        const response = await fetch('/api/admin/siem/statistics');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        
+        if (data.success && data.stats) {
+            document.getElementById('siemEventsSent').textContent = data.stats.events_sent_today || 0;
+            document.getElementById('siemSuccessRate').textContent = (data.stats.success_rate || 100) + '%';
+            document.getElementById('siemFailedEvents').textContent = data.stats.failed_events || 0;
+            document.getElementById('siemLastSent').textContent = data.stats.last_sent || 'Never';
+        }
+    } catch (error) {
+        console.error('Error loading SIEM statistics:', error);
+    }
+}
+
+async function refreshSIEMActivity() {
+    try {
+        const response = await fetch('/api/admin/siem/activity');
+        if (!response.ok) throw new Error('Failed to load activity');
+        
+        const data = await response.json();
+        
+        const tbody = document.getElementById('siemActivityTable');
+        tbody.innerHTML = '';
+        
+        if (data.success && data.activity && data.activity.length > 0) {
+            data.activity.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding: 12px;">${new Date(item.timestamp).toLocaleString()}</td>
+                    <td style="padding: 12px;">${item.event_type}</td>
+                    <td style="padding: 12px;">
+                        <span class="badge" style="background: ${item.status === 'success' ? '#48bb78' : '#f56565'};">
+                            ${item.status === 'success' ? '✓ Success' : '✗ Failed'}
+                        </span>
+                    </td>
+                    <td style="padding: 12px;">${item.details || '-'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-muted">
+                        <i class="fas fa-info-circle me-2"></i>No recent activity
+                    </td>
+                </tr>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading SIEM activity:', error);
+    }
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+    toast.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+    `;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 4000);
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,1182 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Database Settings
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for configuring database settings, connection
+    parameters, and database management operations.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'database' %}
+{% set page_title = 'Database Settings' %}
+{% set page_icon = 'database' %}
+{% set page_description = 'Configure database connection and initialize schema' %}
+
+{% block admin_content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                    <i class="fas fa-cog me-2" style="color: #2c5282;"></i>Database Configuration
+                </h5>
+            </div>
+            <div class="card-body" style="padding: 24px;">
+                <form id="databaseSettingsForm">
+                    <!-- Database Type -->
+                    <div class="mb-4">
+                        <label class="form-label" style="font-weight: 600; font-size: 14px; color: #2d3748;">Database Type</label>
+                        <select class="form-select" id="db_type" name="db_type" required style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            <option value="sqlite">SQLite (File-based)</option>
+                            <option value="mssql">Microsoft SQL Server</option>
+                            <option value="azuresql">Azure SQL Database</option>
+                            <option value="postgresql">PostgreSQL</option>
+                            <option value="mysql">MySQL / MariaDB</option>
+                        </select>
+                        <small class="text-muted d-block mt-1" style="font-size: 13px;">
+                            Select the database type you want to use
+                        </small>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- SQLite Settings -->
+                    <div id="sqliteSettings">
+                        <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">SQLite Settings</h6>
+                        <div class="mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Database File Path</label>
+                            <input type="text" class="form-control" id="sqlite_path" name="sqlite_path" 
+                                   value="data/database/chhsca_data.db" required
+                                   style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            <small class="text-muted d-block mt-1" style="font-size: 13px;">
+                                Path to the SQLite database file (relative to application root)
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- MS SQL Server Settings -->
+                    <div id="mssqlSettings" style="display: none;">
+                        <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Microsoft SQL Server Settings</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Server</label>
+                                <input type="text" class="form-control" id="mssql_server" name="mssql_server" 
+                                       value="localhost" required
+                                       placeholder="localhost or server-name"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                                <small class="text-muted" style="font-size: 13px;">On-premises SQL Server hostname or IP address</small>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Port</label>
+                                <input type="number" class="form-control" id="mssql_port" name="mssql_port" 
+                                       value="1433" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Database</label>
+                                <input type="text" class="form-control" id="mssql_database" name="mssql_database" 
+                                       value="chhsca_data" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                        </div>
+                        <div id="mssqlAuthSection">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="mssql_trusted_connection" name="mssql_trusted_connection" 
+                                           checked>
+                                    <label class="form-check-label" for="mssql_trusted_connection" style="font-size: 14px;">
+                                        Use Windows Authentication (Trusted Connection)
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="mssqlCredentials" style="display: none;">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Username</label>
+                                        <input type="text" class="form-control" id="mssql_username" name="mssql_username" 
+                                               autocomplete="off"
+                                               style="border: 1px solid #cbd5e0; font-size: 14px;">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Password</label>
+                                        <input type="password" class="form-control" id="mssql_password" name="mssql_password" 
+                                               autocomplete="new-password"
+                                               style="border: 1px solid #cbd5e0; font-size: 14px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Azure SQL Settings -->
+                    <div id="azuresqlSettings" style="display: none;">
+                        <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Azure SQL Database Settings</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Server</label>
+                                <input type="text" class="form-control" id="azuresql_server" name="azuresql_server" 
+                                       value="" required
+                                       placeholder="your-server.database.windows.net"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                                <small class="text-muted" style="font-size: 13px;">Azure SQL server hostname</small>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Port</label>
+                                <input type="number" class="form-control" id="azuresql_port" name="azuresql_port" 
+                                       value="1433" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Database</label>
+                                <input type="text" class="form-control" id="azuresql_database" name="azuresql_database" 
+                                       value="chhsca_data" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Username</label>
+                                <input type="text" class="form-control" id="azuresql_username" name="azuresql_username" 
+                                       value="" required
+                                       autocomplete="off"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Password</label>
+                                <input type="password" class="form-control" id="azuresql_password" name="azuresql_password" 
+                                       required
+                                       autocomplete="new-password"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PostgreSQL Settings -->
+                    <div id="postgresqlSettings" style="display: none;">
+                        <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">PostgreSQL Settings</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Host</label>
+                                <input type="text" class="form-control" id="postgresql_host" name="postgresql_host" 
+                                       value="localhost" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                                <small class="text-muted" style="font-size: 13px;">PostgreSQL server hostname or IP address</small>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Port</label>
+                                <input type="number" class="form-control" id="postgresql_port" name="postgresql_port" 
+                                       value="5432" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Database</label>
+                                <input type="text" class="form-control" id="postgresql_database" name="postgresql_database" 
+                                       value="chhsca_data" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Username</label>
+                                <input type="text" class="form-control" id="postgresql_username" name="postgresql_username" 
+                                       value="postgres" required
+                                       autocomplete="off"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Password</label>
+                                <input type="password" class="form-control" id="postgresql_password" name="postgresql_password" 
+                                       autocomplete="new-password"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MySQL Settings -->
+                    <div id="mysqlSettings" style="display: none;">
+                        <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">MySQL / MariaDB Settings</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Host</label>
+                                <input type="text" class="form-control" id="mysql_host" name="mysql_host" 
+                                       value="localhost" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                                <small class="text-muted" style="font-size: 13px;">MySQL server hostname or IP address</small>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Port</label>
+                                <input type="number" class="form-control" id="mysql_port" name="mysql_port" 
+                                       value="3306" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Database</label>
+                                <input type="text" class="form-control" id="mysql_database" name="mysql_database" 
+                                       value="chhsca_data" required
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Username</label>
+                                <input type="text" class="form-control" id="mysql_username" name="mysql_username" 
+                                       value="root" required
+                                       autocomplete="off"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Password</label>
+                                <input type="password" class="form-control" id="mysql_password" name="mysql_password" 
+                                       autocomplete="new-password"
+                                       style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Common Settings -->
+                    <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Connection Settings</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Connection Timeout (seconds)</label>
+                            <input type="number" class="form-control" id="connection_timeout" name="connection_timeout" 
+                                   value="30" required
+                                   style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Max Connections</label>
+                            <input type="number" class="form-control" id="max_connections" name="max_connections" 
+                                   value="10" required
+                                   style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <button type="button" class="btn btn-primary" id="testConnectionBtn">
+                            <i class="fas fa-plug me-2"></i>Test Connection
+                        </button>
+                        <div>
+                            <button type="button" class="btn btn-success me-2" id="initializeDatabaseBtn" style="display: none;">
+                                <i class="fas fa-database me-2"></i>Initialize Database
+                            </button>
+                            <!-- Save button hidden - using top/bottom save bars instead -->
+                            <button type="submit" class="btn btn-primary" style="display: none;">
+                                <i class="fas fa-save me-2"></i>Save Settings
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Status Messages -->
+        <div id="statusMessages"></div>
+    </div>
+</div>
+
+<!-- Migration Section -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card mb-4" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                    <i class="fas fa-exchange-alt me-2" style="color: #2c5282;"></i>Migration
+                </h5>
+            </div>
+            <div class="card-body" style="padding: 24px;">
+                <div class="alert alert-info mb-4" role="alert" style="border-left: 4px solid #3b82f6;">
+                    <h6 class="alert-heading" style="font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-info-circle me-2"></i>Database Migration
+                    </h6>
+                    <p class="mb-0" style="font-size: 14px;">
+                        Use the migration tool to copy data between different database systems. You can migrate from any database type to any other database type.
+                    </p>
+                    <p class="mb-0 mt-2" style="font-size: 14px;">
+                        The migration wizard will guide you through selecting source and destination databases, testing connections, and optionally creating tables automatically.
+                    </p>
+                </div>
+                
+                <div class="d-flex justify-content-start">
+                    <button type="button" class="btn btn-info" id="migrateDataBtn">
+                        <i class="fas fa-exchange-alt me-2"></i>Migrate Data Between Databases
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize form change tracking (after settings load)
+    setTimeout(() => {
+        if (typeof formChangeTracker !== 'undefined') {
+            const form = document.getElementById('databaseSettingsForm');
+            if (form) {
+                formChangeTracker.init('databaseSettingsForm', async function() {
+                    // Custom save callback
+                    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                }, 1000);
+            }
+        }
+    }, 500);
+    const dbTypeSelect = document.getElementById('db_type');
+    const sqliteSettings = document.getElementById('sqliteSettings');
+    const mssqlSettings = document.getElementById('mssqlSettings');
+    const mssqlTrustedConnection = document.getElementById('mssql_trusted_connection');
+    const mssqlCredentials = document.getElementById('mssqlCredentials');
+    const testConnectionBtn = document.getElementById('testConnectionBtn');
+    const initializeDatabaseBtn = document.getElementById('initializeDatabaseBtn');
+    const migrateDataBtn = document.getElementById('migrateDataBtn');
+    const form = document.getElementById('databaseSettingsForm');
+
+    const postgresqlSettings = document.getElementById('postgresqlSettings');
+    const mysqlSettings = document.getElementById('mysqlSettings');
+    const azuresqlSettings = document.getElementById('azuresqlSettings');
+    const mssqlAuthSection = document.getElementById('mssqlAuthSection');
+
+    // Cache to store settings for each database type
+    const dbSettingsCache = {
+        sqlite: {},
+        mssql: {},
+        azuresql: {},
+        postgresql: {},
+        mysql: {}
+    };
+
+    // Save current database type settings to cache
+    function saveCurrentSettings() {
+        const dbType = dbTypeSelect.value;
+        
+        if (dbType === 'sqlite') {
+            dbSettingsCache.sqlite = {
+                sqlite_path: document.getElementById('sqlite_path').value
+            };
+        } else if (dbType === 'mssql') {
+            dbSettingsCache.mssql = {
+                mssql_server: document.getElementById('mssql_server').value,
+                mssql_port: document.getElementById('mssql_port').value,
+                mssql_database: document.getElementById('mssql_database').value,
+                mssql_trusted_connection: document.getElementById('mssql_trusted_connection').checked,
+                mssql_username: document.getElementById('mssql_username').value,
+                mssql_password: document.getElementById('mssql_password').value
+            };
+        } else if (dbType === 'azuresql') {
+            dbSettingsCache.azuresql = {
+                azuresql_server: document.getElementById('azuresql_server').value,
+                azuresql_port: document.getElementById('azuresql_port').value,
+                azuresql_database: document.getElementById('azuresql_database').value,
+                azuresql_username: document.getElementById('azuresql_username').value,
+                azuresql_password: document.getElementById('azuresql_password').value
+            };
+        } else if (dbType === 'postgresql') {
+            dbSettingsCache.postgresql = {
+                postgresql_host: document.getElementById('postgresql_host').value,
+                postgresql_port: document.getElementById('postgresql_port').value,
+                postgresql_database: document.getElementById('postgresql_database').value,
+                postgresql_username: document.getElementById('postgresql_username').value,
+                postgresql_password: document.getElementById('postgresql_password').value
+            };
+        } else if (dbType === 'mysql') {
+            dbSettingsCache.mysql = {
+                mysql_host: document.getElementById('mysql_host').value,
+                mysql_port: document.getElementById('mysql_port').value,
+                mysql_database: document.getElementById('mysql_database').value,
+                mysql_username: document.getElementById('mysql_username').value,
+                mysql_password: document.getElementById('mysql_password').value
+            };
+        }
+    }
+
+    // Restore cached settings for a database type
+    function restoreCachedSettings(dbType) {
+        const cached = dbSettingsCache[dbType];
+        if (!cached || Object.keys(cached).length === 0) {
+            return; // No cached settings
+        }
+        
+        if (dbType === 'sqlite') {
+            if (cached.sqlite_path) document.getElementById('sqlite_path').value = cached.sqlite_path;
+        } else if (dbType === 'mssql') {
+            if (cached.mssql_server) document.getElementById('mssql_server').value = cached.mssql_server;
+            if (cached.mssql_port) document.getElementById('mssql_port').value = cached.mssql_port;
+            if (cached.mssql_database) document.getElementById('mssql_database').value = cached.mssql_database;
+            if (cached.mssql_trusted_connection !== undefined) {
+                document.getElementById('mssql_trusted_connection').checked = cached.mssql_trusted_connection;
+                toggleMSSQLAuth();
+            }
+            if (cached.mssql_username) document.getElementById('mssql_username').value = cached.mssql_username;
+            if (cached.mssql_password) document.getElementById('mssql_password').value = cached.mssql_password;
+        } else if (dbType === 'azuresql') {
+            if (cached.azuresql_server) document.getElementById('azuresql_server').value = cached.azuresql_server;
+            if (cached.azuresql_port) document.getElementById('azuresql_port').value = cached.azuresql_port;
+            if (cached.azuresql_database) document.getElementById('azuresql_database').value = cached.azuresql_database;
+            if (cached.azuresql_username) document.getElementById('azuresql_username').value = cached.azuresql_username;
+            if (cached.azuresql_password) document.getElementById('azuresql_password').value = cached.azuresql_password;
+        } else if (dbType === 'postgresql') {
+            if (cached.postgresql_host) document.getElementById('postgresql_host').value = cached.postgresql_host;
+            if (cached.postgresql_port) document.getElementById('postgresql_port').value = cached.postgresql_port;
+            if (cached.postgresql_database) document.getElementById('postgresql_database').value = cached.postgresql_database;
+            if (cached.postgresql_username) document.getElementById('postgresql_username').value = cached.postgresql_username;
+            if (cached.postgresql_password) document.getElementById('postgresql_password').value = cached.postgresql_password;
+        } else if (dbType === 'mysql') {
+            if (cached.mysql_host) document.getElementById('mysql_host').value = cached.mysql_host;
+            if (cached.mysql_port) document.getElementById('mysql_port').value = cached.mysql_port;
+            if (cached.mysql_database) document.getElementById('mysql_database').value = cached.mysql_database;
+            if (cached.mysql_username) document.getElementById('mysql_username').value = cached.mysql_username;
+            if (cached.mysql_password) document.getElementById('mysql_password').value = cached.mysql_password;
+        }
+    }
+
+    // Toggle MS SQL authentication method
+    function toggleMSSQLAuth() {
+        const trustedConn = document.getElementById('mssql_trusted_connection');
+        const credentials = document.getElementById('mssqlCredentials');
+        const usernameField = document.getElementById('mssql_username');
+        const passwordField = document.getElementById('mssql_password');
+        
+        if (trustedConn && credentials && usernameField && passwordField) {
+            if (trustedConn.checked) {
+                credentials.style.display = 'none';
+                usernameField.required = false;
+                passwordField.required = false;
+            } else {
+                credentials.style.display = 'block';
+                usernameField.required = true;
+                passwordField.required = true;
+            }
+        }
+    }
+
+    // Attach event listener to trusted connection checkbox
+    if (mssqlTrustedConnection) {
+        mssqlTrustedConnection.addEventListener('change', toggleMSSQLAuth);
+    }
+
+    // Toggle settings based on database type
+    dbTypeSelect.addEventListener('change', function() {
+        // Save current settings before switching
+        saveCurrentSettings();
+        
+        const dbType = this.value;
+        
+        // Hide all settings
+        sqliteSettings.style.display = 'none';
+        mssqlSettings.style.display = 'none';
+        azuresqlSettings.style.display = 'none';
+        postgresqlSettings.style.display = 'none';
+        mysqlSettings.style.display = 'none';
+        
+        // Show relevant settings
+        if (dbType === 'sqlite') {
+            sqliteSettings.style.display = 'block';
+        } else if (dbType === 'mssql') {
+            mssqlSettings.style.display = 'block';
+            if (mssqlAuthSection) {
+                mssqlAuthSection.style.display = 'block';
+            }
+            // Trigger the toggle function to set initial state
+            if (mssqlTrustedConnection) {
+                toggleMSSQLAuth();
+            }
+        } else if (dbType === 'azuresql') {
+            azuresqlSettings.style.display = 'block';
+        } else if (dbType === 'postgresql') {
+            postgresqlSettings.style.display = 'block';
+        } else if (dbType === 'mysql') {
+            mysqlSettings.style.display = 'block';
+        }
+        
+        // Restore cached settings for the new database type
+        restoreCachedSettings(dbType);
+    });
+
+    // Test connection
+    testConnectionBtn.addEventListener('click', async function() {
+        const formData = new FormData(form);
+        testConnectionBtn.disabled = true;
+        testConnectionBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+        
+        try {
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
+            const response = await fetch('/api/database/test-connection', {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            const data = await response.json();
+            
+            if (data.success) {
+                showStatusMessage('success', 'Connection successful!', data.message || 'Database connection test passed.');
+            } else {
+                showStatusMessage('danger', 'Connection failed', data.error || 'Unable to connect to database.');
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                showStatusMessage('danger', 'Connection timeout', 'Connection test timed out after 30 seconds. Please check your settings and try again.');
+            } else {
+                showStatusMessage('danger', 'Error', 'Failed to test connection: ' + error.message);
+            }
+        } finally {
+            testConnectionBtn.disabled = false;
+            testConnectionBtn.innerHTML = '<i class="fas fa-plug me-2"></i>Test Connection';
+        }
+    });
+
+    // Initialize database
+    initializeDatabaseBtn.addEventListener('click', async function() {
+        if (!confirm('This will create all required database tables. Continue?')) {
+            return;
+        }
+        
+        const formData = new FormData(form);
+        initializeDatabaseBtn.disabled = true;
+        initializeDatabaseBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Initializing...';
+        
+        try {
+            const response = await fetch('/api/database/initialize', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showStatusMessage('success', 'Database initialized', data.message || 'All tables created successfully.');
+            } else {
+                showStatusMessage('danger', 'Initialization failed', data.error || 'Failed to initialize database.');
+            }
+        } catch (error) {
+            showStatusMessage('danger', 'Error', 'Failed to initialize database: ' + error.message);
+        } finally {
+            initializeDatabaseBtn.disabled = false;
+            initializeDatabaseBtn.innerHTML = '<i class="fas fa-database me-2"></i>Initialize Database';
+        }
+    });
+
+    // Form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch('/api/settings/database', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                showStatusMessage('success', 'Settings saved', 'Database settings have been saved successfully.');
+                // Mark form as saved to clear "unsaved changes" indicator
+                if (typeof formChangeTracker !== 'undefined') {
+                    formChangeTracker.markSaved('databaseSettingsForm');
+                }
+                // Refresh database pill to show updated database type
+                if (typeof window.refreshNavPill === 'function') {
+                    window.refreshNavPill('database');
+                }
+            } else {
+                showStatusMessage('danger', 'Save failed', data.error || 'Failed to save database settings.');
+            }
+        } catch (error) {
+            showStatusMessage('danger', 'Error', 'Failed to save settings: ' + error.message);
+        }
+    });
+
+    function showStatusMessage(type, title, message) {
+        const container = document.getElementById('statusMessages');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} alert-dismissible fade show`;
+        alert.innerHTML = `
+            <strong>${title}:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        container.innerHTML = '';
+        container.appendChild(alert);
+    }
+
+    async function loadSettings() {
+        try {
+            const response = await fetch('/api/settings/database');
+            const data = await response.json();
+            
+            if (data.success && data.settings) {
+                const settings = data.settings;
+                
+                // Populate cache with all settings from server
+                // SQLite settings
+                if (settings.sqlite_path) {
+                    dbSettingsCache.sqlite.sqlite_path = settings.sqlite_path;
+                }
+                
+                // MS SQL settings
+                if (settings.mssql_server) dbSettingsCache.mssql.mssql_server = settings.mssql_server;
+                if (settings.mssql_port) dbSettingsCache.mssql.mssql_port = settings.mssql_port;
+                if (settings.mssql_database) dbSettingsCache.mssql.mssql_database = settings.mssql_database;
+                if (settings.mssql_trusted_connection !== undefined) dbSettingsCache.mssql.mssql_trusted_connection = settings.mssql_trusted_connection;
+                if (settings.mssql_username) dbSettingsCache.mssql.mssql_username = settings.mssql_username;
+                
+                // Azure SQL settings
+                if (settings.azuresql_server) dbSettingsCache.azuresql.azuresql_server = settings.azuresql_server;
+                if (settings.azuresql_port) dbSettingsCache.azuresql.azuresql_port = settings.azuresql_port;
+                if (settings.azuresql_database) dbSettingsCache.azuresql.azuresql_database = settings.azuresql_database;
+                if (settings.azuresql_username) dbSettingsCache.azuresql.azuresql_username = settings.azuresql_username;
+                
+                // PostgreSQL settings
+                if (settings.postgresql_host) dbSettingsCache.postgresql.postgresql_host = settings.postgresql_host;
+                if (settings.postgresql_port) dbSettingsCache.postgresql.postgresql_port = settings.postgresql_port;
+                if (settings.postgresql_database) dbSettingsCache.postgresql.postgresql_database = settings.postgresql_database;
+                if (settings.postgresql_username) dbSettingsCache.postgresql.postgresql_username = settings.postgresql_username;
+                
+                // MySQL settings
+                if (settings.mysql_host) dbSettingsCache.mysql.mysql_host = settings.mysql_host;
+                if (settings.mysql_port) dbSettingsCache.mysql.mysql_port = settings.mysql_port;
+                if (settings.mysql_database) dbSettingsCache.mysql.mysql_database = settings.mysql_database;
+                if (settings.mysql_username) dbSettingsCache.mysql.mysql_username = settings.mysql_username;
+                
+                // Set database type
+                if (settings.db_type) {
+                    dbTypeSelect.value = settings.db_type;
+                    dbTypeSelect.dispatchEvent(new Event('change'));
+                }
+                
+                // Populate form fields based on database type
+                if (settings.db_type === 'sqlite') {
+                    if (settings.sqlite_path) document.getElementById('sqlite_path').value = settings.sqlite_path;
+                } else if (settings.db_type === 'mssql') {
+                    if (settings.mssql_server) document.getElementById('mssql_server').value = settings.mssql_server;
+                    if (settings.mssql_port) document.getElementById('mssql_port').value = settings.mssql_port;
+                    if (settings.mssql_database) document.getElementById('mssql_database').value = settings.mssql_database;
+                    if (settings.mssql_trusted_connection !== undefined) {
+                        document.getElementById('mssql_trusted_connection').checked = settings.mssql_trusted_connection;
+                        toggleMSSQLAuth();
+                    }
+                    if (settings.mssql_username) document.getElementById('mssql_username').value = settings.mssql_username;
+                } else if (settings.db_type === 'azuresql') {
+                    if (settings.azuresql_server) document.getElementById('azuresql_server').value = settings.azuresql_server;
+                    if (settings.azuresql_port) document.getElementById('azuresql_port').value = settings.azuresql_port;
+                    if (settings.azuresql_database) document.getElementById('azuresql_database').value = settings.azuresql_database;
+                    if (settings.azuresql_username) document.getElementById('azuresql_username').value = settings.azuresql_username;
+                } else if (settings.db_type === 'postgresql') {
+                    if (settings.postgresql_host) document.getElementById('postgresql_host').value = settings.postgresql_host;
+                    if (settings.postgresql_port) document.getElementById('postgresql_port').value = settings.postgresql_port;
+                    if (settings.postgresql_database) document.getElementById('postgresql_database').value = settings.postgresql_database;
+                    if (settings.postgresql_username) document.getElementById('postgresql_username').value = settings.postgresql_username;
+                } else if (settings.db_type === 'mysql') {
+                    if (settings.mysql_host) document.getElementById('mysql_host').value = settings.mysql_host;
+                    if (settings.mysql_port) document.getElementById('mysql_port').value = settings.mysql_port;
+                    if (settings.mysql_database) document.getElementById('mysql_database').value = settings.mysql_database;
+                    if (settings.mysql_username) document.getElementById('mysql_username').value = settings.mysql_username;
+                }
+                
+                // Common settings
+                if (settings.connection_timeout) document.getElementById('connection_timeout').value = settings.connection_timeout;
+                if (settings.max_connections) document.getElementById('max_connections').value = settings.max_connections;
+            }
+        } catch (error) {
+            console.error('Error loading database settings:', error);
+        }
+    }
+
+    // Check initialization status
+    async function checkInitializationStatus() {
+        try {
+            const response = await fetch('/api/database/check-initialization');
+            const data = await response.json();
+            
+            if (data.success) {
+                // Show Initialize Database button only if not initialized
+                if (initializeDatabaseBtn) {
+                    initializeDatabaseBtn.style.display = !data.initialized ? 'inline-block' : 'none';
+                }
+                
+                // Migrate button is always visible now - validation happens in the modal
+            }
+        } catch (error) {
+            console.error('Error checking initialization status:', error);
+        }
+    }
+
+    // Check initialization status when database type changes
+    if (dbTypeSelect) {
+        dbTypeSelect.addEventListener('change', function() {
+            setTimeout(checkInitializationStatus, 500);
+        });
+    }
+
+    // Migration modal and functionality
+    if (migrateDataBtn) {
+        migrateDataBtn.addEventListener('click', function() {
+            showMigrationModal();
+        });
+    }
+
+    function showMigrationModal() {
+        // Create modal HTML with From/To database selectors
+        const modalHtml = `
+            <div class="modal fade" id="migrateDataModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Database Migration Wizard</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-muted mb-4">
+                                Select source and destination databases. Both connections will be tested before migration can begin.
+                            </p>
+                            <form id="migrationForm">
+                                <div class="row">
+                                    <!-- SOURCE DATABASE -->
+                                    <div class="col-md-6">
+                                        <div class="card mb-3" style="border: 2px solid #3b82f6;">
+                                            <div class="card-header" style="background: #3b82f6; color: white;">
+                                                <h6 class="mb-0"><i class="fas fa-database me-2"></i>Source Database (FROM)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Database Type</label>
+                                                    <select class="form-select" id="migration_source_type" required>
+                                                        <option value="sqlite">SQLite</option>
+                                                        <option value="mssql">Microsoft SQL Server</option>
+                                                        <option value="postgresql">PostgreSQL</option>
+                                                        <option value="mysql">MySQL / MariaDB</option>
+                                                    </select>
+                                                </div>
+                                                <div id="migration_source_settings"></div>
+                                                <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2" id="testSourceBtn">
+                                                    <i class="fas fa-plug me-1"></i>Test Source Connection
+                                                </button>
+                                                <div id="sourceStatus" class="mt-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- DESTINATION DATABASE -->
+                                    <div class="col-md-6">
+                                        <div class="card mb-3" style="border: 2px solid #10b981;">
+                                            <div class="card-header" style="background: #10b981; color: white;">
+                                                <h6 class="mb-0"><i class="fas fa-database me-2"></i>Destination Database (TO)</h6>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label fw-bold">Database Type</label>
+                                                    <select class="form-select" id="migration_dest_type" required>
+                                                        <option value="sqlite">SQLite</option>
+                                                        <option value="mssql" selected>Microsoft SQL Server</option>
+                                                        <option value="postgresql">PostgreSQL</option>
+                                                        <option value="mysql">MySQL / MariaDB</option>
+                                                    </select>
+                                                </div>
+                                                <div id="migration_dest_settings"></div>
+                                                <button type="button" class="btn btn-sm btn-outline-success w-100 mt-2" id="testDestBtn">
+                                                    <i class="fas fa-plug me-1"></i>Test Destination Connection
+                                                </button>
+                                                <div id="destStatus" class="mt-2"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- MIGRATION OPTIONS -->
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Migration Options</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="migration_create_tables" checked>
+                                            <label class="form-check-label fw-bold" for="migration_create_tables">
+                                                Create Tables Automatically
+                                            </label>
+                                            <div class="text-muted small ms-4">Tables will be created in destination database. Uncheck if tables already exist.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-primary" id="startMigrationBtn" disabled>
+                                <i class="fas fa-exchange-alt me-2"></i>Start Migration
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove existing modal if any
+        const existingModal = document.getElementById('migrateDataModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+        
+        // Add modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('migrateDataModal'));
+        modal.show();
+        
+        // Track connection states
+        let sourceConnected = false;
+        let destConnected = false;
+        let sourceHasSchema = false;
+        
+        function updateMigrationButton() {
+            const btn = document.getElementById('startMigrationBtn');
+            btn.disabled = !(sourceConnected && destConnected && sourceHasSchema);
+            if (!sourceConnected || !destConnected) {
+                btn.title = 'Test both connections first';
+            } else if (!sourceHasSchema) {
+                btn.title = 'Source database has no schema/tables';
+            } else {
+                btn.title = '';
+            }
+        }
+        
+        // Render settings UI for a database type
+        function renderSettings(containerId, prefix, dbType) {
+            const container = document.getElementById(containerId);
+            const cached = dbSettingsCache[dbType] || {};
+            
+            if (dbType === 'sqlite') {
+                container.innerHTML = `
+                    <div class="mb-2">
+                        <label class="form-label small">Database Path</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_sqlite_path" 
+                               value="${cached.sqlite_path || 'data/database/chhsca_data.db'}">
+                    </div>
+                `;
+            } else if (dbType === 'mssql') {
+                container.innerHTML = `
+                    <div class="mb-2">
+                        <label class="form-label small">Server</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_mssql_server" 
+                               value="${cached.mssql_server || ''}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Port</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_mssql_port" 
+                               value="${cached.mssql_port || '1433'}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Database</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_mssql_database" 
+                               value="${cached.mssql_database || ''}">
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="${prefix}_mssql_trusted_connection" ${cached.mssql_trusted_connection !== false ? 'checked' : ''}>
+                        <label class="form-check-label small">Windows Authentication</label>
+                    </div>
+                    <div id="${prefix}_mssql_creds" style="display: ${cached.mssql_trusted_connection !== false ? 'none' : 'block'};">
+                        <input type="text" class="form-control form-control-sm mb-2" id="${prefix}_mssql_username" placeholder="Username" value="${cached.mssql_username || ''}">
+                        <input type="password" class="form-control form-control-sm" id="${prefix}_mssql_password" placeholder="Password" value="${cached.mssql_password || ''}">
+                    </div>
+                `;
+                document.getElementById(`${prefix}_mssql_trusted_connection`).addEventListener('change', function() {
+                    document.getElementById(`${prefix}_mssql_creds`).style.display = this.checked ? 'none' : 'block';
+                });
+            } else if (dbType === 'postgresql') {
+                container.innerHTML = `
+                    <div class="mb-2">
+                        <label class="form-label small">Host</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_postgresql_host" value="${cached.postgresql_host || 'localhost'}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Port</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_postgresql_port" value="${cached.postgresql_port || '5432'}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Database</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_postgresql_database" value="${cached.postgresql_database || ''}">
+                    </div>
+                    <input type="text" class="form-control form-control-sm mb-2" id="${prefix}_postgresql_username" placeholder="Username" value="${cached.postgresql_username || ''}">
+                    <input type="password" class="form-control form-control-sm" id="${prefix}_postgresql_password" placeholder="Password" value="${cached.postgresql_password || ''}">
+                `;
+            } else if (dbType === 'mysql') {
+                container.innerHTML = `
+                    <div class="mb-2">
+                        <label class="form-label small">Host</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_mysql_host" value="${cached.mysql_host || 'localhost'}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Port</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_mysql_port" value="${cached.mysql_port || '3306'}">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Database</label>
+                        <input type="text" class="form-control form-control-sm" id="${prefix}_mysql_database" value="${cached.mysql_database || ''}">
+                    </div>
+                    <input type="text" class="form-control form-control-sm mb-2" id="${prefix}_mysql_username" placeholder="Username" value="${cached.mysql_username || ''}">
+                    <input type="password" class="form-control form-control-sm" id="${prefix}_mysql_password" placeholder="Password" value="${cached.mysql_password || ''}">
+                `;
+            }
+        }
+        
+        // Handle source type change
+        document.getElementById('migration_source_type').addEventListener('change', function() {
+            renderSettings('migration_source_settings', 'migration_source', this.value);
+            sourceConnected = false;
+            sourceHasSchema = false;
+            document.getElementById('sourceStatus').innerHTML = '';
+            updateMigrationButton();
+        });
+        
+        // Handle dest type change
+        document.getElementById('migration_dest_type').addEventListener('change', function() {
+            renderSettings('migration_dest_settings', 'migration_dest', this.value);
+            destConnected = false;
+            document.getElementById('destStatus').innerHTML = '';
+            updateMigrationButton();
+        });
+        
+        // Test source connection
+        document.getElementById('testSourceBtn').addEventListener('click', async function() {
+            const btn = this;
+            const statusDiv = document.getElementById('sourceStatus');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+            statusDiv.innerHTML = '';
+            
+            try {
+                const formData = new FormData();
+                const dbType = document.getElementById('migration_source_type').value;
+                formData.append('db_type', dbType);
+                
+                // Add credentials based on type
+                if (dbType === 'sqlite') {
+                    formData.append('sqlite_path', document.getElementById('migration_source_sqlite_path').value);
+                } else if (dbType === 'mssql') {
+                    formData.append('mssql_server', document.getElementById('migration_source_mssql_server').value);
+                    formData.append('mssql_port', document.getElementById('migration_source_mssql_port').value);
+                    formData.append('mssql_database', document.getElementById('migration_source_mssql_database').value);
+                    formData.append('mssql_trusted_connection', document.getElementById('migration_source_mssql_trusted_connection').checked);
+                    if (!document.getElementById('migration_source_mssql_trusted_connection').checked) {
+                        formData.append('mssql_username', document.getElementById('migration_source_mssql_username').value);
+                        formData.append('mssql_password', document.getElementById('migration_source_mssql_password').value);
+                    }
+                } else if (dbType === 'postgresql') {
+                    formData.append('postgresql_host', document.getElementById('migration_source_postgresql_host').value);
+                    formData.append('postgresql_port', document.getElementById('migration_source_postgresql_port').value);
+                    formData.append('postgresql_database', document.getElementById('migration_source_postgresql_database').value);
+                    formData.append('postgresql_username', document.getElementById('migration_source_postgresql_username').value);
+                    formData.append('postgresql_password', document.getElementById('migration_source_postgresql_password').value);
+                } else if (dbType === 'mysql') {
+                    formData.append('mysql_host', document.getElementById('migration_source_mysql_host').value);
+                    formData.append('mysql_port', document.getElementById('migration_source_mysql_port').value);
+                    formData.append('mysql_database', document.getElementById('migration_source_mysql_database').value);
+                    formData.append('mysql_username', document.getElementById('migration_source_mysql_username').value);
+                    formData.append('mysql_password', document.getElementById('migration_source_mysql_password').value);
+                }
+                
+                const response = await fetch('/api/database/test-connection', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    sourceConnected = true;
+                    // Check if source has schema
+                    const checkResponse = await fetch('/api/database/check-initialization');
+                    const checkData = await checkResponse.json();
+                    sourceHasSchema = checkData.success && checkData.initialized;
+                    
+                    if (sourceHasSchema) {
+                        statusDiv.innerHTML = '<div class="alert alert-success alert-sm p-2 mb-0"><i class="fas fa-check-circle me-1"></i>Connected & Schema Found</div>';
+                    } else {
+                        statusDiv.innerHTML = '<div class="alert alert-warning alert-sm p-2 mb-0"><i class="fas fa-exclamation-triangle me-1"></i>Connected but no schema/tables found</div>';
+                    }
+                } else {
+                    sourceConnected = false;
+                    sourceHasSchema = false;
+                    statusDiv.innerHTML = `<div class="alert alert-danger alert-sm p-2 mb-0"><i class="fas fa-times-circle me-1"></i>${data.error || 'Connection failed'}</div>`;
+                }
+            } catch (error) {
+                sourceConnected = false;
+                sourceHasSchema = false;
+                statusDiv.innerHTML = `<div class="alert alert-danger alert-sm p-2 mb-0"><i class="fas fa-times-circle me-1"></i>${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plug me-1"></i>Test Source Connection';
+                updateMigrationButton();
+            }
+        });
+        
+        // Test dest connection
+        document.getElementById('testDestBtn').addEventListener('click', async function() {
+            const btn = this;
+            const statusDiv = document.getElementById('destStatus');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+            statusDiv.innerHTML = '';
+            
+            try {
+                const formData = new FormData();
+                const dbType = document.getElementById('migration_dest_type').value;
+                formData.append('db_type', dbType);
+                
+                // Add credentials based on type
+                if (dbType === 'sqlite') {
+                    formData.append('sqlite_path', document.getElementById('migration_dest_sqlite_path').value);
+                } else if (dbType === 'mssql') {
+                    formData.append('mssql_server', document.getElementById('migration_dest_mssql_server').value);
+                    formData.append('mssql_port', document.getElementById('migration_dest_mssql_port').value);
+                    formData.append('mssql_database', document.getElementById('migration_dest_mssql_database').value);
+                    formData.append('mssql_trusted_connection', document.getElementById('migration_dest_mssql_trusted_connection').checked);
+                    if (!document.getElementById('migration_dest_mssql_trusted_connection').checked) {
+                        formData.append('mssql_username', document.getElementById('migration_dest_mssql_username').value);
+                        formData.append('mssql_password', document.getElementById('migration_dest_mssql_password').value);
+                    }
+                } else if (dbType === 'postgresql') {
+                    formData.append('postgresql_host', document.getElementById('migration_dest_postgresql_host').value);
+                    formData.append('postgresql_port', document.getElementById('migration_dest_postgresql_port').value);
+                    formData.append('postgresql_database', document.getElementById('migration_dest_postgresql_database').value);
+                    formData.append('postgresql_username', document.getElementById('migration_dest_postgresql_username').value);
+                    formData.append('postgresql_password', document.getElementById('migration_dest_postgresql_password').value);
+                } else if (dbType === 'mysql') {
+                    formData.append('mysql_host', document.getElementById('migration_dest_mysql_host').value);
+                    formData.append('mysql_port', document.getElementById('migration_dest_mysql_port').value);
+                    formData.append('mysql_database', document.getElementById('migration_dest_mysql_database').value);
+                    formData.append('mysql_username', document.getElementById('migration_dest_mysql_username').value);
+                    formData.append('mysql_password', document.getElementById('migration_dest_mysql_password').value);
+                }
+                
+                const response = await fetch('/api/database/test-connection', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    destConnected = true;
+                    statusDiv.innerHTML = '<div class="alert alert-success alert-sm p-2 mb-0"><i class="fas fa-check-circle me-1"></i>Connected Successfully</div>';
+                } else {
+                    destConnected = false;
+                    statusDiv.innerHTML = `<div class="alert alert-danger alert-sm p-2 mb-0"><i class="fas fa-times-circle me-1"></i>${data.error || 'Connection failed'}</div>`;
+                }
+            } catch (error) {
+                destConnected = false;
+                statusDiv.innerHTML = `<div class="alert alert-danger alert-sm p-2 mb-0"><i class="fas fa-times-circle me-1"></i>${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-plug me-1"></i>Test Destination Connection';
+                updateMigrationButton();
+            }
+        });
+        
+        // Start migration (simplified - using existing endpoint)
+        document.getElementById('startMigrationBtn').addEventListener('click', async function() {
+            const sourceType = document.getElementById('migration_source_type').value;
+            const destType = document.getElementById('migration_dest_type').value;
+            
+            if (!confirm(`This will migrate all data from ${sourceType.toUpperCase()} to ${destType.toUpperCase()}. Continue?`)) {
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Migrating...';
+            
+            try {
+                const formData = new FormData();
+                
+                // Source database parameters
+                formData.append('source_db_type', sourceType);
+                if (sourceType === 'sqlite') {
+                    formData.append('source_sqlite_path', document.getElementById('migration_source_sqlite_path').value);
+                } else if (sourceType === 'mssql') {
+                    formData.append('source_mssql_server', document.getElementById('migration_source_mssql_server').value);
+                    formData.append('source_mssql_port', document.getElementById('migration_source_mssql_port').value);
+                    formData.append('source_mssql_database', document.getElementById('migration_source_mssql_database').value);
+                    formData.append('source_mssql_username', document.getElementById('migration_source_mssql_username').value);
+                    formData.append('source_mssql_password', document.getElementById('migration_source_mssql_password').value);
+                    formData.append('source_mssql_trusted_connection', document.getElementById('migration_source_mssql_trusted_connection').checked ? '1' : '0');
+                } else if (sourceType === 'postgresql') {
+                    formData.append('source_postgresql_host', document.getElementById('migration_source_postgresql_host').value);
+                    formData.append('source_postgresql_port', document.getElementById('migration_source_postgresql_port').value);
+                    formData.append('source_postgresql_database', document.getElementById('migration_source_postgresql_database').value);
+                    formData.append('source_postgresql_username', document.getElementById('migration_source_postgresql_username').value);
+                    formData.append('source_postgresql_password', document.getElementById('migration_source_postgresql_password').value);
+                } else if (sourceType === 'mysql') {
+                    formData.append('source_mysql_host', document.getElementById('migration_source_mysql_host').value);
+                    formData.append('source_mysql_port', document.getElementById('migration_source_mysql_port').value);
+                    formData.append('source_mysql_database', document.getElementById('migration_source_mysql_database').value);
+                    formData.append('source_mysql_username', document.getElementById('migration_source_mysql_username').value);
+                    formData.append('source_mysql_password', document.getElementById('migration_source_mysql_password').value);
+                }
+                
+                // Destination database parameters
+                formData.append('destination_db_type', destType);
+                if (destType === 'sqlite') {
+                    formData.append('destination_sqlite_path', document.getElementById('migration_dest_sqlite_path').value);
+                } else if (destType === 'mssql') {
+                    formData.append('destination_mssql_server', document.getElementById('migration_dest_mssql_server').value);
+                    formData.append('destination_mssql_port', document.getElementById('migration_dest_mssql_port').value);
+                    formData.append('destination_mssql_database', document.getElementById('migration_dest_mssql_database').value);
+                    formData.append('destination_mssql_username', document.getElementById('migration_dest_mssql_username').value);
+                    formData.append('destination_mssql_password', document.getElementById('migration_dest_mssql_password').value);
+                    formData.append('destination_mssql_trusted_connection', document.getElementById('migration_dest_mssql_trusted_connection').checked ? '1' : '0');
+                } else if (destType === 'postgresql') {
+                    formData.append('destination_postgresql_host', document.getElementById('migration_dest_postgresql_host').value);
+                    formData.append('destination_postgresql_port', document.getElementById('migration_dest_postgresql_port').value);
+                    formData.append('destination_postgresql_database', document.getElementById('migration_dest_postgresql_database').value);
+                    formData.append('destination_postgresql_username', document.getElementById('migration_dest_postgresql_username').value);
+                    formData.append('destination_postgresql_password', document.getElementById('migration_dest_postgresql_password').value);
+                } else if (destType === 'mysql') {
+                    formData.append('destination_mysql_host', document.getElementById('migration_dest_mysql_host').value);
+                    formData.append('destination_mysql_port', document.getElementById('migration_dest_mysql_port').value);
+                    formData.append('destination_mysql_database', document.getElementById('migration_dest_mysql_database').value);
+                    formData.append('destination_mysql_username', document.getElementById('migration_dest_mysql_username').value);
+                    formData.append('destination_mysql_password', document.getElementById('migration_dest_mysql_password').value);
+                }
+                
+                const response = await fetch('/api/admincp/database/migrate-data', {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': '{{ api_key }}'
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatusMessage('success', 'Migration Complete', result.message);
+                    console.log('Migration results:', result.migration_results);
+                } else {
+                    showStatusMessage('danger', 'Migration Failed', result.error || result.message);
+                }
+                
+            } catch (error) {
+                showStatusMessage('danger', 'Migration Error', error.message);
+            } finally {
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-database me-2"></i>Start Migration';
+            }
+        });
+        
+        // Initialize
+        renderSettings('migration_source_settings', 'migration_source', 'sqlite');
+        renderSettings('migration_dest_settings', 'migration_dest', 'mssql');
+    }
+
+    // Load settings on page load
+    loadSettings().then(() => {
+        setTimeout(checkInitializationStatus, 1000);
+    });
+});
+</script>
+{% endblock %}

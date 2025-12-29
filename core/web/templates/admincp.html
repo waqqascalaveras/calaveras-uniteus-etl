@@ -1,0 +1,1613 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Main Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Main admin control panel page providing access to all administrative
+    functions including system configuration, user management, and security settings.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Professional tab styling */
+    #adminTabs .nav-link {
+        color: #4a5568;
+        font-weight: 500;
+        font-size: 14px;
+        padding: 12px 20px;
+        border: none;
+        border-bottom: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    
+    #adminTabs .nav-link:hover {
+        color: #2c5282;
+        background: #f7fafc;
+    }
+    
+    #adminTabs .nav-link.active {
+        color: #2c5282;
+        border-bottom-color: #2c5282;
+        background: transparent;
+    }
+    
+    /* Button hover effects */
+    .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        transition: all 0.2s;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2 style="font-size: 24px; font-weight: 600; color: #1a202c; margin-bottom: 8px;">
+                <i class="fas fa-shield-alt me-2" style="color: #2c5282;"></i>Admin Control Panel
+            </h2>
+            <p style="font-size: 14px; color: #718096; margin: 0;">Manage users, system settings, and monitor application health</p>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card text-center" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px;">
+                <div class="card-body" style="padding: 20px;">
+                    <h3 style="color: #2c5282; margin-bottom: 8px; font-size: 28px; font-weight: 600;" id="totalUsers">-</h3>
+                    <small style="font-size: 13px; color: #718096; font-weight: 500;">Total Users</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px;">
+                <div class="card-body" style="padding: 20px;">
+                    <h3 style="color: #48bb78; margin-bottom: 8px; font-size: 28px; font-weight: 600;" id="activeUsers">-</h3>
+                    <small style="font-size: 13px; color: #718096; font-weight: 500;">Active Users</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px;">
+                <div class="card-body" style="padding: 20px;">
+                    <h3 style="color: #ed8936; margin-bottom: 8px; font-size: 28px; font-weight: 600;" id="pendingActions">0</h3>
+                    <small style="font-size: 13px; color: #718096; font-weight: 500;">Pending Actions</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist" style="border-bottom: 2px solid #e2e8f0;">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="users-tab" data-bs-toggle="tab" data-bs-target="#users" type="button" style="color: #4a5568; font-weight: 500; font-size: 14px; padding: 12px 20px; border: none; border-bottom: 2px solid transparent;">
+                <i class="fas fa-users me-1"></i>User Management
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="audit-tab" data-bs-toggle="tab" data-bs-target="#audit" type="button" style="color: #4a5568; font-weight: 500; font-size: 14px; padding: 12px 20px; border: none; border-bottom: 2px solid transparent;">
+                <i class="fas fa-history me-1"></i>Audit Log
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="system-tab" data-bs-toggle="tab" data-bs-target="#system" type="button" style="color: #4a5568; font-weight: 500; font-size: 14px; padding: 12px 20px; border: none; border-bottom: 2px solid transparent;">
+                <i class="fas fa-server me-1"></i>System Info
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sftp-tab" data-bs-toggle="tab" data-bs-target="#sftp" type="button" style="color: #4a5568; font-weight: 500; font-size: 14px; padding: 12px 20px; border: none; border-bottom: 2px solid transparent;">
+                <i class="fas fa-cloud-download-alt me-1"></i>SFTP Integration
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="config-tab" data-bs-toggle="tab" data-bs-target="#config" type="button" style="color: #4a5568; font-weight: 500; font-size: 14px; padding: 12px 20px; border: none; border-bottom: 2px solid transparent;">
+                <i class="fas fa-cogs me-1"></i>Configuration
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="adminTabContent">
+        <!-- User Management Tab -->
+        <div class="tab-pane fade show active" id="users" role="tabpanel">
+            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+                    <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                        <i class="fas fa-users me-2" style="color: #2c5282;"></i>User Accounts
+                    </h5>
+                    <button class="btn btn-sm" onclick="showAddUserModal()" style="background: #2c5282; color: white; border: none; padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 6px;">
+                        <i class="fas fa-user-plus me-1"></i>Add User
+                    </button>
+                </div>
+                <div class="card-body" style="padding: 24px;">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="usersTable" style="margin-bottom: 0;">
+                            <thead style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                                <tr>
+                                    <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Username</th>
+                                    <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Display Name</th>
+                                    <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Email</th>
+                                    <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Role</th>
+                                    <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Status</th>
+                                    <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Created</th>
+                                    <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" class="text-center py-4" style="color: #718096; font-size: 14px;">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>Loading users...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="alert mt-3 mb-0" style="background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 16px;">
+                        <i class="fas fa-info-circle me-2" style="color: #4299e1;"></i>
+                        <strong style="color: #1a202c;">Note:</strong> 
+                        <span style="color: #4a5568;">Users cannot be permanently deleted due to audit trail requirements. Click the toggle button to activate or deactivate user accounts. Deactivated users cannot login but their historical records are preserved.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Log Tab -->
+        <div class="tab-pane fade" id="audit" role="tabpanel">
+            
+            <!-- Statistics Row -->
+            <div class="row mb-4" id="auditStatsRow">
+                <div class="col-md-3">
+                    <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-body">
+                            <div style="font-size: 32px; font-weight: 700; color: #2c5282;" id="auditTotalEvents">-</div>
+                            <div class="mt-2" style="font-size: 13px; color: #718096; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Total Events</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-body">
+                            <div class="text-success" style="font-size: 32px; font-weight: 700;" id="auditSuccessEvents">-</div>
+                            <div class="mt-2" style="font-size: 13px; color: #718096; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Successful</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-body">
+                            <div class="text-danger" style="font-size: 32px; font-weight: 700;" id="auditFailureEvents">-</div>
+                            <div class="mt-2" style="font-size: 13px; color: #718096; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Failed</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-body">
+                            <div class="text-info" style="font-size: 32px; font-weight: 700;" id="auditUniqueUsers">-</div>
+                            <div class="mt-2" style="font-size: 13px; color: #718096; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Unique Users</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card mb-4" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-body" style="padding: 20px;">
+                    <div class="row">
+                        <div class="col-md-2">
+                            <label style="font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 5px;">Category</label>
+                            <select class="form-select form-select-sm" id="auditFilterCategory" onchange="applyAuditFilters()">
+                                <option value="">All Categories</option>
+                                <option value="authentication">Authentication</option>
+                                <option value="user_management">User Management</option>
+                                <option value="etl">ETL Operations</option>
+                                <option value="data_access">Data Access</option>
+                                <option value="data_export">Data Export</option>
+                                <option value="data_import">Data Import</option>
+                                <option value="system">System</option>
+                                <option value="security">Security</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label style="font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 5px;">Status</label>
+                            <select class="form-select form-select-sm" id="auditFilterSuccess" onchange="applyAuditFilters()">
+                                <option value="">All</option>
+                                <option value="true">Success</option>
+                                <option value="false">Failed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label style="font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 5px;">User</label>
+                            <input type="text" class="form-control form-control-sm" id="auditFilterUsername" 
+                                   placeholder="Username" onchange="applyAuditFilters()">
+                        </div>
+                        <div class="col-md-2">
+                            <label style="font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 5px;">Start Date</label>
+                            <input type="date" class="form-control form-control-sm" id="auditFilterStartDate" onchange="applyAuditFilters()">
+                        </div>
+                        <div class="col-md-2">
+                            <label style="font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 5px;">End Date</label>
+                            <input type="date" class="form-control form-control-sm" id="auditFilterEndDate" onchange="applyAuditFilters()">
+                        </div>
+                        <div class="col-md-2">
+                            <label style="font-size: 13px; font-weight: 600; color: #4a5568; margin-bottom: 5px;">Search</label>
+                            <input type="text" class="form-control form-control-sm" id="auditFilterSearch" 
+                                   placeholder="Search..." onchange="applyAuditFilters()">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearAuditFilters()">
+                                <i class="fas fa-times me-1"></i>Clear Filters
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="exportAuditToCSV()">
+                                <i class="fas fa-download me-1"></i>Export CSV
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary ms-2" onclick="loadAuditLog()">
+                                <i class="fas fa-sync-alt me-1"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audit Table -->
+            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+                    <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                        <i class="fas fa-history me-2" style="color: #2c5282;"></i>Audit Trail
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="auditTable" style="margin-bottom: 0;">
+                            <thead style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                                <tr>
+                                    <th style="width: 30px; padding: 10px; font-size: 13px; font-weight: 600; color: #4a5568;"></th>
+                                    <th style="width: 180px; padding: 10px; font-size: 13px; font-weight: 600; color: #4a5568;">Timestamp</th>
+                                    <th style="width: 120px; padding: 10px; font-size: 13px; font-weight: 600; color: #4a5568;">User</th>
+                                    <th style="width: 140px; padding: 10px; font-size: 13px; font-weight: 600; color: #4a5568;">Category</th>
+                                    <th style="width: 180px; padding: 10px; font-size: 13px; font-weight: 600; color: #4a5568;">Action</th>
+                                    <th style="padding: 10px; font-size: 13px; font-weight: 600; color: #4a5568;">Resource/Details</th>
+                                    <th style="width: 80px; padding: 10px; font-size: 13px; font-weight: 600; color: #4a5568;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4" style="color: #718096; font-size: 14px;">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>Loading audit log...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Showing <span id="auditResultsInfo">0</span> results</small>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" id="auditPrevBtn" onclick="previousAuditPage()" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <span class="mx-2 small">Page <span id="auditCurrentPage">1</span></span>
+                        <button class="btn btn-sm btn-outline-secondary" id="auditNextBtn" onclick="nextAuditPage()">
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Info Tab -->
+        <div class="tab-pane fade" id="system" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                                <i class="fas fa-info-circle me-2" style="color: #2c5282;"></i>Application Info
+                            </h5>
+                        </div>
+                        <div class="card-body" style="padding: 20px;">
+                            <table class="table table-sm" style="margin-bottom: 0;">
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="width: 200px; padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">Version</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;">1.0.0</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">Python Version</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;" id="pythonVersion">-</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">Database Size</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;" id="dbSize">-</td>
+                                </tr>
+                                <tr>
+                                    <th style="padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">Uptime</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;" id="uptime">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-4">
+                    <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                        <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                                <i class="fas fa-database me-2" style="color: #2c5282;"></i>Database Statistics
+                            </h5>
+                        </div>
+                        <div class="card-body" style="padding: 20px;">
+                            <table class="table table-sm" style="margin-bottom: 0;">
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="width: 200px; padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">Total Records</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;" id="totalRecords">-</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">Last ETL Run</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;" id="lastETL">-</td>
+                                </tr>
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <th style="padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">ETL Success Rate</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;" id="etlSuccessRate">-</td>
+                                </tr>
+                                <tr>
+                                    <th style="padding: 10px 0; font-size: 13px; font-weight: 500; color: #4a5568;">Avg Processing Time</th>
+                                    <td style="padding: 10px 0; font-size: 13px; color: #1a202c;" id="avgProcessingTime">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SFTP Integration Tab -->
+        <div class="tab-pane fade" id="sftp" role="tabpanel">
+            <!-- Content will be loaded here via AJAX -->
+            <div id="sftp-content-container">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Loading SFTP settings...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Tab -->
+        <div class="tab-pane fade" id="config" role="tabpanel">
+            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+                    <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                        <i class="fas fa-cogs me-2" style="color: #2c5282;"></i>System Configuration
+                    </h5>
+                </div>
+                <div class="card-body" style="padding: 24px;">
+                    <div class="alert" style="background: #fef5e7; border: 1px solid #f9e79f; border-radius: 6px; padding: 12px 16px; margin-bottom: 24px;">
+                        <i class="fas fa-exclamation-triangle me-2" style="color: #f39c12;"></i>
+                        <strong style="color: #1a202c;">Warning:</strong> <span style="color: #4a5568;">Modifying these settings may affect system behavior. Changes should be made carefully.</span>
+                    </div>
+
+                    <h6 style="font-size: 14px; font-weight: 600; color: #1a202c; margin-bottom: 16px;">Authentication Settings</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Authentication Mode</label>
+                                <select class="form-select" disabled style="font-size: 14px; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                                    <option selected>HYBRID (AD + Local)</option>
+                                </select>
+                                <small style="font-size: 12px; color: #718096;">Current: {{ 'HYBRID' }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Session Timeout (minutes)</label>
+                                <input type="number" class="form-control" value="60" disabled style="font-size: 14px; padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                                <small style="font-size: 12px; color: #718096;">Requires restart to apply</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="mb-3">Database Settings</h6>
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Database Path</label>
+                                <input type="text" class="form-control" value="data/database/chhsca_data.db" disabled>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h6 style="font-size: 14px; font-weight: 600; color: #1a202c; margin-bottom: 16px;">
+                        Integration Settings
+                    </h6>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); height: 100%;">
+                                <div class="card-body" style="padding: 20px;">
+                                    <div class="d-flex align-items-start mb-2">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-shield-alt fa-2x" style="color: #2c5282;"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1" style="font-weight: 600; font-size: 14px;">SIEM Integration</h6>
+                                            <p class="text-muted mb-3" style="font-size: 13px;">
+                                                Configure Security Information and Event Management for enterprise logging
+                                            </p>
+                                            <a href="/settings/siem" class="btn btn-sm btn-outline-primary" style="font-size: 13px;">
+                                                <i class="fas fa-cog me-1"></i>Configure SIEM
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); height: 100%;">
+                                <div class="card-body" style="padding: 20px;">
+                                    <div class="d-flex align-items-start mb-2">
+                                        <div class="flex-shrink-0">
+                                            <i class="fas fa-cloud-download-alt fa-2x" style="color: #667eea;"></i>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <h6 class="mb-1" style="font-weight: 600; font-size: 14px;">SFTP Integration</h6>
+                                            <p class="text-muted mb-3" style="font-size: 13px;">
+                                                Automated file downloads from secure FTP servers (see SFTP tab for full configuration)
+                                            </p>
+                                            <button class="btn btn-sm btn-primary" onclick="document.getElementById('sftp-tab').click()" style="font-size: 13px; background: #667eea; border: none;">
+                                                <i class="fas fa-arrow-right me-1"></i>Go to SFTP Settings
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+                <h5 class="modal-title" style="font-size: 18px; font-weight: 600; color: #1a202c;">
+                    <i class="fas fa-user-plus me-2" style="color: #2c5282;"></i>Add New User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Authentication Method</label>
+                        <select class="form-select" id="newAuthMethod" required style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;" onchange="togglePasswordField()">
+                            <option value="local">Local Database (Username & Password)</option>
+                            <option value="ad">Active Directory (Windows Authentication)</option>
+                        </select>
+                        <small style="font-size: 12px; color: #718096; margin-top: 4px; display: block;">Select how this user will log in</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Username</label>
+                        <input type="text" class="form-control" id="newUsername" required autocomplete="off" style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;" onblur="checkUsernameAvailability()">
+                        <div id="usernameValidation" style="margin-top: 6px; font-size: 13px; display: none;"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Display Name</label>
+                        <input type="text" class="form-control" id="newDisplayName" style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                        <div class="form-check mt-2" id="obtainDisplayNameCheckbox" style="display: none;">
+                            <input type="checkbox" class="form-check-input" id="obtainDisplayNameOnLogin" style="cursor: pointer;" onchange="toggleDisplayNameField()">
+                            <label class="form-check-label" for="obtainDisplayNameOnLogin" style="font-size: 13px; color: #4a5568; cursor: pointer;">
+                                Obtain display name upon first login (from Active Directory)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Email</label>
+                        <input type="email" class="form-control" id="newEmail" style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                        <div class="form-check mt-2" id="obtainEmailCheckbox" style="display: none;">
+                            <input type="checkbox" class="form-check-input" id="obtainEmailOnLogin" style="cursor: pointer;" onchange="toggleEmailField()">
+                            <label class="form-check-label" for="obtainEmailOnLogin" style="font-size: 13px; color: #4a5568; cursor: pointer;">
+                                Obtain email upon first login (from Active Directory)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="passwordField">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Password</label>
+                        <input type="password" class="form-control" id="newPassword" autocomplete="new-password" style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                        <small style="font-size: 12px; color: #718096; margin-top: 4px; display: block;">Minimum 8 characters</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Role</label>
+                        <select class="form-select" id="newRole" required style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                            <option value="viewer">Viewer (Read-Only)</option>
+                            <option value="operator">Operator (Can Run ETL)</option>
+                            <option value="admin">Admin (Full Access)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="background: #f7fafc; border-top: 1px solid #e2e8f0; padding: 16px 24px;">
+                <button type="button" class="btn" data-bs-dismiss="modal" style="background: white; color: #4a5568; border: 1px solid #cbd5e0; padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 6px;">Cancel</button>
+                <button type="button" class="btn" onclick="createUser()" style="background: #2c5282; color: white; border: none; padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 6px;">
+                    <i class="fas fa-save me-1"></i>Create User
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            <div class="modal-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+                <h5 class="modal-title" style="font-size: 18px; font-weight: 600; color: #1a202c;">
+                    <i class="fas fa-user-edit me-2" style="color: #2c5282;"></i>Edit User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUsername">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Username</label>
+                        <input type="text" class="form-control" id="editUsernameDisplay" disabled style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; background: #f7fafc;">
+                        <small style="font-size: 12px; color: #718096; margin-top: 4px; display: block;">Username cannot be changed</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Display Name</label>
+                        <input type="text" class="form-control" id="editDisplayName" required style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Email</label>
+                        <input type="email" class="form-control" id="editEmail" style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Authentication Method</label>
+                        <input type="text" class="form-control" id="editAuthMethodDisplay" disabled style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px; background: #f7fafc;">
+                        <small style="font-size: 12px; color: #718096; margin-top: 4px; display: block;">Authentication method cannot be changed after creation</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Role</label>
+                        <select class="form-select" id="editRole" required style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                            <option value="viewer">Viewer (Read-Only)</option>
+                            <option value="operator">Operator (Can Run ETL)</option>
+                            <option value="admin">Admin (Full Access)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Status</label>
+                        <select class="form-select" id="editIsActive" required style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="editPasswordField">
+                        <label class="form-label" style="font-size: 14px; font-weight: 500; color: #2d3748; margin-bottom: 6px;">Change Password</label>
+                        <input type="password" class="form-control" id="editPassword" autocomplete="new-password" style="font-size: 14px; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 6px;">
+                        <small style="font-size: 12px; color: #718096; margin-top: 4px; display: block;">Leave blank to keep current password. Minimum 8 characters if changing.</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer" style="background: #f7fafc; border-top: 1px solid #e2e8f0; padding: 16px 24px;">
+                <button type="button" class="btn" data-bs-dismiss="modal" style="background: white; color: #4a5568; border: 1px solid #cbd5e0; padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 6px;">Cancel</button>
+                <button type="button" class="btn" onclick="updateUser()" style="background: #2c5282; color: white; border: none; padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 6px;">
+                    <i class="fas fa-save me-1"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Store current user info
+const currentUsername = '{{ user.username }}';
+
+// Utility functions
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function showError(message) {
+    console.error(message);
+    // You can enhance this with a toast notification or modal
+    alert(message);
+}
+
+function showSuccess(message) {
+    console.log(message);
+    // You can enhance this with a toast notification
+    alert(message);
+}
+
+// Load SFTP content when tab is shown
+async function loadSFTPContent() {
+    const container = document.getElementById('sftp-content-container');
+    try {
+        const response = await fetch('/settings/sftp');
+        const html = await response.text();
+        
+        // Extract just the content div (not the full page with nav)
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const content = doc.querySelector('.container-fluid');
+        
+        if (content) {
+            container.innerHTML = content.innerHTML;
+            
+            // Execute any scripts in the loaded content
+            const scripts = container.querySelectorAll('script');
+            scripts.forEach(script => {
+                const newScript = document.createElement('script');
+                newScript.textContent = script.textContent;
+                document.body.appendChild(newScript);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading SFTP content:', error);
+        container.innerHTML = `
+            <div class="alert alert-danger m-4">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Failed to load SFTP settings. Please refresh the page.
+            </div>
+        `;
+    }
+}
+
+// Listen for SFTP tab being shown
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsers();
+    loadAuditLog();
+    loadSystemInfo();
+    
+    // Load SFTP content when tab is clicked
+    const sftpTab = document.getElementById('sftp-tab');
+    if (sftpTab) {
+        sftpTab.addEventListener('shown.bs.tab', function() {
+            loadSFTPContent();
+        });
+    }
+});
+
+// Helper function to create DOM element from HTML string
+function createElementFromHTML(html) {
+    const template = document.createElement('template');
+    template.innerHTML = html.trim();
+    return template.content.firstChild;
+}
+
+// Helper function to create user action buttons
+function createUserActionButtons(user) {
+    const container = document.createElement('td');
+    container.style.padding = '12px';
+    
+    // Edit button (always shown)
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-sm';
+    editBtn.title = 'Edit';
+    editBtn.style.cssText = 'background: white; color: #2c5282; border: 1px solid #cbd5e0; padding: 4px 10px; font-size: 13px; border-radius: 4px; margin-right: 4px;';
+    editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+    editBtn.onclick = () => editUser(user.username);
+    container.appendChild(editBtn);
+    
+    // Toggle Active/Inactive button (only if not current user)
+    if (user.username !== currentUsername) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'btn btn-sm';
+        
+        if (user.is_active) {
+            // Show deactivate button for active users
+            toggleBtn.title = 'Deactivate';
+            toggleBtn.style.cssText = 'background: white; color: #e53e3e; border: 1px solid #cbd5e0; padding: 4px 10px; font-size: 13px; border-radius: 4px;';
+            toggleBtn.innerHTML = '<i class="fas fa-user-slash"></i>';
+        } else {
+            // Show activate button for inactive users
+            toggleBtn.title = 'Activate';
+            toggleBtn.style.cssText = 'background: white; color: #48bb78; border: 1px solid #cbd5e0; padding: 4px 10px; font-size: 13px; border-radius: 4px;';
+            toggleBtn.innerHTML = '<i class="fas fa-user-check"></i>';
+        }
+        
+        toggleBtn.onclick = () => toggleUserStatus(user.username, user.is_active);
+        container.appendChild(toggleBtn);
+    }
+    
+    return container;
+}
+
+// Helper function to create a table cell
+function createCell(content, styles = {}) {
+    const td = document.createElement('td');
+    Object.assign(td.style, styles);
+    if (typeof content === 'string') {
+        td.textContent = content;
+    } else {
+        td.appendChild(content);
+    }
+    return td;
+}
+
+// Helper function to create a badge
+function createBadge(text, bgColor) {
+    const span = document.createElement('span');
+    span.className = 'badge';
+    span.style.cssText = `background: ${bgColor}; font-size: 12px; padding: 4px 10px; font-weight: 500; border-radius: 4px;`;
+    span.textContent = text;
+    return span;
+}
+
+// Helper function to create user table row
+function createUserRow(user) {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f1f5f9';
+    
+    // Username
+    const usernameContent = document.createElement('strong');
+    usernameContent.style.color = '#1a202c';
+    usernameContent.textContent = user.username;
+    tr.appendChild(createCell(usernameContent, { padding: '12px', fontSize: '14px' }));
+    
+    // Display Name
+    tr.appendChild(createCell(user.display_name || '-', { padding: '12px', fontSize: '14px', color: '#4a5568' }));
+    
+    // Email
+    tr.appendChild(createCell(user.email || '-', { padding: '12px', fontSize: '14px', color: '#4a5568' }));
+    
+    // Role Badge
+    const roleBadge = createBadge(user.role, getRoleBadgeColor(user.role));
+    tr.appendChild(createCell(roleBadge, { padding: '12px' }));
+    
+    // Status Badge
+    const statusBadge = createBadge(
+        user.is_active ? 'Active' : 'Inactive',
+        user.is_active ? '#48bb78' : '#a0aec0'
+    );
+    tr.appendChild(createCell(statusBadge, { padding: '12px' }));
+    
+    // Created Date
+    const createdDate = new Date(user.created_at).toLocaleDateString();
+    tr.appendChild(createCell(createdDate, { padding: '12px', fontSize: '14px', color: '#4a5568' }));
+    
+    // Actions - pass the full user object
+    tr.appendChild(createUserActionButtons(user));
+    
+    return tr;
+}
+
+async function loadUsers() {
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/users');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Update stats
+        document.getElementById('totalUsers').textContent = data.total || 0;
+        document.getElementById('activeUsers').textContent = data.active || 0;
+        
+        // Clear and populate table
+        const tbody = document.querySelector('#usersTable tbody');
+        tbody.innerHTML = '';
+        
+        if (data.users && data.users.length > 0) {
+            data.users.forEach(user => {
+                tbody.appendChild(createUserRow(user));
+            });
+        } else {
+            const emptyRow = document.createElement('tr');
+            const emptyCell = document.createElement('td');
+            emptyCell.colSpan = 7;
+            emptyCell.className = 'text-center';
+            emptyCell.style.cssText = 'padding: 32px; font-size: 14px; color: #718096;';
+            emptyCell.textContent = 'No users found';
+            emptyRow.appendChild(emptyCell);
+            tbody.appendChild(emptyRow);
+        }
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showError(`Failed to load users: ${error.message}`);
+    }
+}
+
+// ============================================================================
+// Audit Log Functions (Enhanced)
+// ============================================================================
+
+let auditCurrentPage = 1;
+const auditPageSize = 50;
+let auditCurrentFilters = {};
+let allAuditLogs = [];
+
+async function loadAuditLog() {
+    try {
+        const params = new URLSearchParams({
+            limit: auditPageSize,
+            offset: (auditCurrentPage - 1) * auditPageSize,
+            ...auditCurrentFilters
+        });
+
+        const response = await fetchWithRoleCheck(`/api/admin/audit-log?${params}`);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        allAuditLogs = data.logs || [];
+        
+        renderAuditLogs(allAuditLogs);
+        updateAuditPagination(allAuditLogs.length);
+        
+        // Update results info
+        const start = (auditCurrentPage - 1) * auditPageSize + 1;
+        const end = start + allAuditLogs.length - 1;
+        document.getElementById('auditResultsInfo').textContent = 
+            allAuditLogs.length > 0 ? `${start}-${end}` : '0';
+        
+        // Load statistics
+        loadAuditStatistics();
+        
+    } catch (error) {
+        console.error('Error loading audit log:', error);
+        showError('Failed to load audit logs');
+    }
+}
+
+async function loadAuditStatistics() {
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/audit-statistics');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const stats = data.statistics;
+
+        document.getElementById('auditTotalEvents').textContent = 
+            stats.total_events?.toLocaleString() || '0';
+        document.getElementById('auditSuccessEvents').textContent = 
+            (stats.success_failure?.success || 0).toLocaleString();
+        document.getElementById('auditFailureEvents').textContent = 
+            (stats.success_failure?.failure || 0).toLocaleString();
+        document.getElementById('auditUniqueUsers').textContent = 
+            Object.keys(stats.by_user || {}).length;
+        
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+    }
+}
+
+function renderAuditLogs(logs) {
+    const tbody = document.getElementById('auditTableBody');
+    tbody.innerHTML = '';
+
+    if (logs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-5" style="color: #718096;">
+                    <i class="fas fa-inbox me-2"></i>No audit logs found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    logs.forEach((log, index) => {
+        const tr = createEnhancedAuditRow(log, index);
+        tbody.appendChild(tr);
+    });
+}
+
+function createEnhancedAuditRow(log, index) {
+    const tr = document.createElement('tr');
+    tr.style.cssText = 'border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background-color 0.15s;';
+    tr.id = `audit-row-${index}`;
+    tr.onmouseenter = () => tr.style.backgroundColor = '#f7fafc';
+    tr.onmouseleave = () => tr.style.backgroundColor = tr.classList.contains('expanded') ? '#f7fafc' : '';
+    tr.onclick = () => toggleAuditDetails(index);
+
+    // Expand icon
+    const iconTd = document.createElement('td');
+    iconTd.style.cssText = 'padding: 10px; text-align: center;';
+    iconTd.innerHTML = `<i class="fas fa-chevron-right" id="audit-icon-${index}" style="color: #a0aec0; font-size: 12px;"></i>`;
+    tr.appendChild(iconTd);
+
+    // Timestamp
+    const timestamp = new Date(log.timestamp).toLocaleString();
+    tr.appendChild(createCell(timestamp, {fontSize: '13px', color: '#4a5568', padding: '10px'}));
+
+    // Username
+    tr.appendChild(createCell(log.username, {fontSize: '13px', fontWeight: '500', padding: '10px'}));
+
+    // Category badge
+    const categoryBadge = document.createElement('span');
+    categoryBadge.style.cssText = `font-size: 11px; padding: 4px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; color: white; background: ${getAuditCategoryColor(log.category)}`;
+    categoryBadge.textContent = log.category;
+    tr.appendChild(createCell(categoryBadge, {padding: '10px'}));
+
+    // Action
+    tr.appendChild(createCell(log.action.replace(/_/g, ' '), {fontSize: '13px', padding: '10px'}));
+
+    // Resource/Details
+    const resourceText = log.target_resource || log.details || '-';
+    tr.appendChild(createCell(resourceText, {fontSize: '13px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '10px'}));
+
+    // Status badge
+    const statusBadge = document.createElement('span');
+    statusBadge.style.cssText = `font-size: 11px; padding: 4px 8px; border-radius: 4px; font-weight: 600; color: white; background: ${log.success ? '#48bb78' : '#f56565'}`;
+    statusBadge.textContent = log.success ? 'SUCCESS' : 'FAILED';
+    tr.appendChild(createCell(statusBadge, {padding: '10px'}));
+
+    // Details row (hidden by default)
+    const detailsTr = createAuditDetailsRow(log, index);
+    tr.after(detailsTr);
+
+    return tr;
+}
+
+function createAuditDetailsRow(log, index) {
+    const tr = document.createElement('tr');
+    tr.id = `audit-details-${index}`;
+    tr.style.display = 'none';
+
+    const td = document.createElement('td');
+    td.colSpan = 7;
+    td.style.cssText = 'background: #f7fafc; padding: 15px; border-top: 1px solid #e2e8f0;';
+    
+    let html = '<div class="row">';
+    
+    // Left column
+    html += '<div class="col-md-6">';
+    html += `<p class="mb-2"><strong>Timestamp:</strong> ${new Date(log.timestamp).toLocaleString()}</p>`;
+    html += `<p class="mb-2"><strong>User:</strong> ${log.username}</p>`;
+    html += `<p class="mb-2"><strong>Category:</strong> ${log.category}</p>`;
+    html += `<p class="mb-2"><strong>Action:</strong> ${log.action}</p>`;
+    if (log.ip_address) html += `<p class="mb-2"><strong>IP Address:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 3px;">${log.ip_address}</code></p>`;
+    if (log.session_id) html += `<p class="mb-2"><strong>Session ID:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 3px;">${log.session_id.substring(0, 16)}...</code></p>`;
+    html += '</div>';
+    
+    // Right column
+    html += '<div class="col-md-6">';
+    if (log.target_resource) html += `<p class="mb-2"><strong>Resource:</strong> ${log.target_resource}</p>`;
+    if (log.target_user) html += `<p class="mb-2"><strong>Target User:</strong> ${log.target_user}</p>`;
+    if (log.duration_ms) html += `<p class="mb-2"><strong>Duration:</strong> ${log.duration_ms}ms</p>`;
+    if (log.record_count) html += `<p class="mb-2"><strong>Records:</strong> ${log.record_count.toLocaleString()}</p>`;
+    if (log.file_size) html += `<p class="mb-2"><strong>File Size:</strong> ${formatBytes(log.file_size)}</p>`;
+    if (log.details) html += `<p class="mb-2"><strong>Details:</strong> ${log.details}</p>`;
+    if (log.error_message) html += `<p class="mb-2 text-danger"><strong>Error:</strong> ${log.error_message}</p>`;
+    if (log.user_agent) html += `<p class="mb-2"><strong>User Agent:</strong> <small>${log.user_agent}</small></p>`;
+    html += '</div>';
+    
+    html += '</div>';
+    
+    td.innerHTML = html;
+    tr.appendChild(td);
+    
+    return tr;
+}
+
+function toggleAuditDetails(index) {
+    const detailsRow = document.getElementById(`audit-details-${index}`);
+    const icon = document.getElementById(`audit-icon-${index}`);
+    const row = document.getElementById(`audit-row-${index}`);
+    
+    if (detailsRow.style.display === 'none') {
+        detailsRow.style.display = 'table-row';
+        icon.className = 'fas fa-chevron-down';
+        row.classList.add('expanded');
+    } else {
+        detailsRow.style.display = 'none';
+        icon.className = 'fas fa-chevron-right';
+        row.classList.remove('expanded');
+    }
+}
+
+function getAuditCategoryColor(category) {
+    const colors = {
+        'authentication': '#4299e1',
+        'user_management': '#9f7aea',
+        'etl': '#48bb78',
+        'data_access': '#ed8936',
+        'data_export': '#38b2ac',
+        'data_import': '#667eea',
+        'system': '#718096',
+        'security': '#f56565'
+    };
+    return colors[category] || '#a0aec0';
+}
+
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function applyAuditFilters() {
+    auditCurrentFilters = {};
+    
+    const category = document.getElementById('auditFilterCategory').value;
+    if (category) auditCurrentFilters.category = category;
+    
+    const success = document.getElementById('auditFilterSuccess').value;
+    if (success) auditCurrentFilters.success = success;
+    
+    const username = document.getElementById('auditFilterUsername').value;
+    if (username) auditCurrentFilters.username = username;
+    
+    const startDate = document.getElementById('auditFilterStartDate').value;
+    if (startDate) auditCurrentFilters.start_date = startDate;
+    
+    const endDate = document.getElementById('auditFilterEndDate').value;
+    if (endDate) auditCurrentFilters.end_date = endDate;
+    
+    const search = document.getElementById('auditFilterSearch').value;
+    if (search) auditCurrentFilters.search = search;
+    
+    auditCurrentPage = 1;
+    loadAuditLog();
+}
+
+function clearAuditFilters() {
+    document.getElementById('auditFilterCategory').value = '';
+    document.getElementById('auditFilterSuccess').value = '';
+    document.getElementById('auditFilterUsername').value = '';
+    document.getElementById('auditFilterStartDate').value = '';
+    document.getElementById('auditFilterEndDate').value = '';
+    document.getElementById('auditFilterSearch').value = '';
+    
+    auditCurrentFilters = {};
+    auditCurrentPage = 1;
+    loadAuditLog();
+}
+
+function updateAuditPagination(logsCount) {
+    const prevBtn = document.getElementById('auditPrevBtn');
+    const nextBtn = document.getElementById('auditNextBtn');
+    
+    prevBtn.disabled = auditCurrentPage === 1;
+    nextBtn.disabled = logsCount < auditPageSize;
+    
+    document.getElementById('auditCurrentPage').textContent = auditCurrentPage;
+}
+
+function previousAuditPage() {
+    if (auditCurrentPage > 1) {
+        auditCurrentPage--;
+        loadAuditLog();
+    }
+}
+
+function nextAuditPage() {
+    auditCurrentPage++;
+    loadAuditLog();
+}
+
+async function exportAuditToCSV() {
+    try {
+        const params = new URLSearchParams(auditCurrentFilters);
+        const response = await fetch(`/api/admin/audit-log?${params}`);
+        const data = await response.json();
+        const logs = data.logs || [];
+
+        if (logs.length === 0) {
+            showError('No data to export');
+            return;
+        }
+
+        const csv = [
+            ['Timestamp', 'Username', 'Category', 'Action', 'Resource', 'Status', 'IP Address', 'Details'].join(','),
+            ...logs.map(log => [
+                new Date(log.timestamp).toISOString(),
+                log.username,
+                log.category,
+                log.action,
+                log.target_resource || '',
+                log.success ? 'Success' : 'Failed',
+                log.ip_address || '',
+                (log.details || '').replace(/,/g, ';')
+            ].map(field => `"${field}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `audit-log-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Error exporting CSV:', error);
+        showError('Failed to export audit log');
+    }
+}
+
+// ============================================================================
+// System Info Functions
+// ============================================================================
+
+async function loadSystemInfo() {
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/system-info');
+        const data = await response.json();
+        
+        if (data.python_version) document.getElementById('pythonVersion').textContent = data.python_version;
+        if (data.db_size) document.getElementById('dbSize').textContent = data.db_size;
+        if (data.uptime) document.getElementById('uptime').textContent = data.uptime;
+        if (data.total_records) document.getElementById('totalRecords').textContent = data.total_records.toLocaleString();
+        if (data.last_etl) document.getElementById('lastETL').textContent = new Date(data.last_etl).toLocaleString();
+        if (data.etl_success_rate) document.getElementById('etlSuccessRate').textContent = data.etl_success_rate + '%';
+        if (data.avg_processing_time) document.getElementById('avgProcessingTime').textContent = data.avg_processing_time;
+    } catch (error) {
+        console.error('Error loading system info:', error);
+    }
+}
+
+function showAddUserModal() {
+    // Clear form
+    document.getElementById('newUsername').value = '';
+    document.getElementById('newDisplayName').value = '';
+    document.getElementById('newEmail').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('newRole').value = 'viewer';
+    document.getElementById('newAuthMethod').value = 'local';
+    
+    // Clear username validation
+    document.getElementById('usernameValidation').style.display = 'none';
+    document.getElementById('newUsername').style.borderColor = '#cbd5e0';
+    
+    // Show password field by default (for local auth)
+    document.getElementById('passwordField').style.display = 'block';
+    document.getElementById('newPassword').required = true;
+    
+    // Hide obtain checkboxes by default (for local auth)
+    document.getElementById('obtainEmailCheckbox').style.display = 'none';
+    document.getElementById('obtainDisplayNameCheckbox').style.display = 'none';
+    document.getElementById('obtainEmailOnLogin').checked = false;
+    document.getElementById('obtainDisplayNameOnLogin').checked = false;
+    
+    // Make display name required by default and ensure fields are enabled (for local auth)
+    document.getElementById('newDisplayName').required = true;
+    document.getElementById('newDisplayName').disabled = false;
+    document.getElementById('newDisplayName').style.background = 'white';
+    document.getElementById('newDisplayName').style.color = '#1a202c';
+    document.getElementById('newDisplayName').placeholder = '';
+    
+    document.getElementById('newEmail').disabled = false;
+    document.getElementById('newEmail').style.background = 'white';
+    document.getElementById('newEmail').style.color = '#1a202c';
+    document.getElementById('newEmail').placeholder = '';
+    
+    const modal = new bootstrap.Modal(document.getElementById('addUserModal'));
+    modal.show();
+}
+
+function togglePasswordField() {
+    const authMethod = document.getElementById('newAuthMethod').value;
+    const passwordField = document.getElementById('passwordField');
+    const passwordInput = document.getElementById('newPassword');
+    const obtainEmailCheckbox = document.getElementById('obtainEmailCheckbox');
+    const obtainDisplayNameCheckbox = document.getElementById('obtainDisplayNameCheckbox');
+    const emailInput = document.getElementById('newEmail');
+    const displayNameInput = document.getElementById('newDisplayName');
+    
+    if (authMethod === 'ad') {
+        // Hide password for AD auth
+        passwordField.style.display = 'none';
+        passwordInput.required = false;
+        passwordInput.value = '';
+        
+        // Show obtain checkboxes for AD and check them by default
+        obtainEmailCheckbox.style.display = 'block';
+        obtainDisplayNameCheckbox.style.display = 'block';
+        document.getElementById('obtainEmailOnLogin').checked = true;
+        document.getElementById('obtainDisplayNameOnLogin').checked = true;
+        
+        // Disable the input fields since checkboxes are checked by default
+        displayNameInput.disabled = true;
+        displayNameInput.value = '';
+        displayNameInput.style.background = '#f7fafc';
+        displayNameInput.style.color = '#a0aec0';
+        displayNameInput.placeholder = 'Will be obtained from Active Directory';
+        displayNameInput.required = false;
+        
+        emailInput.disabled = true;
+        emailInput.value = '';
+        emailInput.style.background = '#f7fafc';
+        emailInput.style.color = '#a0aec0';
+        emailInput.placeholder = 'Will be obtained from Active Directory';
+    } else {
+        // Show password for local auth
+        passwordField.style.display = 'block';
+        passwordInput.required = true;
+        
+        // Hide obtain checkboxes for local
+        obtainEmailCheckbox.style.display = 'none';
+        obtainDisplayNameCheckbox.style.display = 'none';
+        document.getElementById('obtainEmailOnLogin').checked = false;
+        document.getElementById('obtainDisplayNameOnLogin').checked = false;
+        
+        // Enable fields and make display name required for local
+        displayNameInput.disabled = false;
+        displayNameInput.style.background = 'white';
+        displayNameInput.style.color = '#1a202c';
+        displayNameInput.placeholder = '';
+        displayNameInput.required = true;
+        
+        emailInput.disabled = false;
+        emailInput.style.background = 'white';
+        emailInput.style.color = '#1a202c';
+        emailInput.placeholder = '';
+    }
+}
+
+function toggleDisplayNameField() {
+    const checkbox = document.getElementById('obtainDisplayNameOnLogin');
+    const input = document.getElementById('newDisplayName');
+    
+    if (checkbox.checked) {
+        // Disable and clear the input when checkbox is checked
+        input.disabled = true;
+        input.value = '';
+        input.style.background = '#f7fafc';
+        input.style.color = '#a0aec0';
+        input.placeholder = 'Will be obtained from Active Directory';
+    } else {
+        // Enable the input when checkbox is unchecked
+        input.disabled = false;
+        input.style.background = 'white';
+        input.style.color = '#1a202c';
+        input.placeholder = '';
+    }
+}
+
+function toggleEmailField() {
+    const checkbox = document.getElementById('obtainEmailOnLogin');
+    const input = document.getElementById('newEmail');
+    
+    if (checkbox.checked) {
+        // Disable and clear the input when checkbox is checked
+        input.disabled = true;
+        input.value = '';
+        input.style.background = '#f7fafc';
+        input.style.color = '#a0aec0';
+        input.placeholder = 'Will be obtained from Active Directory';
+    } else {
+        // Enable the input when checkbox is unchecked
+        input.disabled = false;
+        input.style.background = 'white';
+        input.style.color = '#1a202c';
+        input.placeholder = '';
+    }
+}
+
+async function checkUsernameAvailability() {
+    const username = document.getElementById('newUsername').value.trim();
+    const validationDiv = document.getElementById('usernameValidation');
+    const usernameInput = document.getElementById('newUsername');
+    
+    // Clear validation if username is empty
+    if (!username) {
+        validationDiv.style.display = 'none';
+        usernameInput.style.borderColor = '#cbd5e0';
+        return;
+    }
+    
+    try {
+        // Fetch all users and check case-insensitively
+        const response = await fetch('/api/admin/users');
+        
+        if (!response.ok) {
+            validationDiv.style.display = 'none';
+            usernameInput.style.borderColor = '#cbd5e0';
+            return;
+        }
+        
+        const data = await response.json();
+        
+        // Check if username exists (case-insensitive)
+        const exists = data.users.some(user => 
+            user.username.toLowerCase() === username.toLowerCase()
+        );
+        
+        if (exists) {
+            // Username already exists
+            validationDiv.innerHTML = '<i class="fas fa-times-circle me-1" style="color: #e53e3e;"></i><span style="color: #e53e3e;">Username already exists</span>';
+            validationDiv.style.display = 'block';
+            usernameInput.style.borderColor = '#e53e3e';
+        } else {
+            // Username is available
+            validationDiv.innerHTML = '<i class="fas fa-check-circle me-1" style="color: #48bb78;"></i><span style="color: #48bb78;">Username is available</span>';
+            validationDiv.style.display = 'block';
+            usernameInput.style.borderColor = '#48bb78';
+        }
+    } catch (error) {
+        console.error('Error checking username:', error);
+        validationDiv.style.display = 'none';
+        usernameInput.style.borderColor = '#cbd5e0';
+    }
+}
+
+async function createUser() {
+    const username = document.getElementById('newUsername').value.trim();
+    let display_name = document.getElementById('newDisplayName').value.trim();
+    let email = document.getElementById('newEmail').value.trim();
+    const password = document.getElementById('newPassword').value;
+    const role = document.getElementById('newRole').value;
+    const auth_method = document.getElementById('newAuthMethod').value;
+    const obtainEmailOnLogin = document.getElementById('obtainEmailOnLogin').checked;
+    const obtainDisplayNameOnLogin = document.getElementById('obtainDisplayNameOnLogin').checked;
+    
+    // For AD users with "obtain display name on login", use special marker
+    if (auth_method === 'ad' && obtainDisplayNameOnLogin) {
+        display_name = '__OBTAIN_FROM_AD__';
+    }
+    
+    // For AD users with "obtain email on login", use special marker
+    if (auth_method === 'ad' && obtainEmailOnLogin) {
+        email = '__OBTAIN_FROM_AD__';
+    }
+    
+    // Validate required fields
+    if (!username || !role || !auth_method) {
+        showError('Please fill in all required fields');
+        return;
+    }
+    
+    // Check if username already exists (case-insensitive)
+    try {
+        const checkResponse = await fetchWithRoleCheck('/api/admin/users');
+        if (checkResponse.ok) {
+            const checkData = await checkResponse.json();
+            const exists = checkData.users.some(user => 
+                user.username.toLowerCase() === username.toLowerCase()
+            );
+            if (exists) {
+                showError('Username already exists. Please choose a different username.');
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error checking username:', error);
+        // Continue with creation attempt
+    }
+    
+    // For local auth or AD without obtain checkbox, display name is required
+    if (!display_name || display_name === '__OBTAIN_FROM_AD__') {
+        if (auth_method === 'local') {
+            showError('Display name is required for local authentication');
+            return;
+        }
+        // For AD, display_name can be empty if we're obtaining it
+        if (!obtainDisplayNameOnLogin && !display_name) {
+            showError('Please enter a display name or check "Obtain upon first login"');
+            return;
+        }
+    }
+    
+    // Validate password for local auth
+    if (auth_method === 'local' && (!password || password.length < 8)) {
+        showError('Password must be at least 8 characters for local authentication');
+        return;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('display_name', display_name);
+        formData.append('email', email);
+        formData.append('password', password);
+        formData.append('role', role);
+        formData.append('auth_method', auth_method);
+        
+        const response = await fetchWithRoleCheck('/api/admin/users', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message || 'User created successfully');
+            bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+            loadUsers();
+        } else {
+            showError(data.error || 'Failed to create user');
+        }
+    } catch (error) {
+        console.error('Error creating user:', error);
+        showError(`Failed to create user: ${error.message}`);
+    }
+}
+
+async function showEditUserModal(username) {
+    try {
+        // Fetch user details
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            showError(data.error || 'Failed to fetch user details');
+            return;
+        }
+        
+        const user = data.user;
+        
+        // Populate modal fields
+        document.getElementById('editUsername').value = user.username;
+        document.getElementById('editUsernameDisplay').value = user.username;
+        document.getElementById('editDisplayName').value = user.display_name || '';
+        document.getElementById('editEmail').value = user.email || '';
+        document.getElementById('editAuthMethodDisplay').value = user.auth_method === 'ad' ? 'Active Directory' : 'Local Authentication';
+        document.getElementById('editRole').value = user.role || 'viewer';
+        document.getElementById('editIsActive').value = user.is_active ? '1' : '0';
+        document.getElementById('editPassword').value = '';
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error fetching user details:', error);
+        showError(`Failed to load user details: ${error.message}`);
+    }
+}
+
+async function updateUser() {
+    const username = document.getElementById('editUsername').value.trim();
+    const display_name = document.getElementById('editDisplayName').value.trim();
+    const email = document.getElementById('editEmail').value.trim();
+    const role = document.getElementById('editRole').value;
+    const is_active = document.getElementById('editIsActive').value;
+    const password = document.getElementById('editPassword').value;
+    
+    // Validate required fields
+    if (!display_name || !role) {
+        showError('Display name and role are required');
+        return;
+    }
+    
+    // Validate password if provided
+    if (password && password.length < 8) {
+        showError('Password must be at least 8 characters if provided');
+        return;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('display_name', display_name);
+        formData.append('email', email);
+        formData.append('role', role);
+        formData.append('is_active', is_active);
+        if (password) {
+            formData.append('password', password);
+        }
+        
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+            method: 'PUT',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message || 'User updated successfully');
+            bootstrap.Modal.getInstance(document.getElementById('editUserModal')).hide();
+            loadUsers();
+        } else {
+            showError(data.error || 'Failed to update user');
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        showError(`Failed to update user: ${error.message}`);
+    }
+}
+
+async function editUser(username) {
+    showEditUserModal(username);
+}
+
+async function toggleUserStatus(username, currentlyActive) {
+    const action = currentlyActive ? 'deactivate' : 'activate';
+    const actionPast = currentlyActive ? 'deactivated' : 'activated';
+    
+    if (!confirm(`Are you sure you want to ${action} user "${username}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}/toggle-status`, {
+            method: 'PATCH'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message || `User ${actionPast} successfully`);
+            loadUsers(); // Reload to update the button state
+        } else {
+            showError(data.error || `Failed to ${action} user`);
+        }
+    } catch (error) {
+        console.error(`Error toggling user status:`, error);
+        showError(`Failed to ${action} user: ${error.message}`);
+    }
+}
+
+async function deleteUser(username) {
+    // Legacy function - kept for backwards compatibility
+    // This just calls toggleUserStatus with deactivate
+    if (!confirm(`Are you sure you want to deactivate user "${username}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message || 'User deactivated successfully');
+            loadUsers();
+        } else {
+            showError(data.error || 'Failed to deactivate user');
+        }
+    } catch (error) {
+        console.error('Error deactivating user:', error);
+        showError(`Failed to deactivate user: ${error.message}`);
+    }
+}
+
+function getRoleBadgeColor(role) {
+    const colors = {
+        'admin': '#e53e3e',      // Red for admin
+        'operator': '#ed8936',   // Orange for operator
+        'viewer': '#4299e1'      // Blue for viewer
+    };
+    return colors[role] || '#a0aec0';  // Gray default
+}
+
+</script>
+{% endblock %}

@@ -1,0 +1,706 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel User Management
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for user management, including user creation,
+    role assignment, and account administration.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'users' %}
+{% set page_title = 'User Management' %}
+{% set page_icon = 'users' %}
+{% set page_description = 'Manage user accounts, roles, and permissions' %}
+
+{% block admin_content %}
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px;">
+            <div class="card-body" style="padding: 20px;">
+                <h3 style="color: #2c5282; margin-bottom: 8px; font-size: 28px; font-weight: 600;" id="totalUsers">-</h3>
+                <small style="font-size: 13px; color: #718096; font-weight: 500;">Total Users</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px;">
+            <div class="card-body" style="padding: 20px;">
+                <h3 style="color: #48bb78; margin-bottom: 8px; font-size: 28px; font-weight: 600;" id="activeUsers">-</h3>
+                <small style="font-size: 13px; color: #718096; font-weight: 500;">Active Users</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border-radius: 8px;">
+            <div class="card-body" style="padding: 20px;">
+                <h3 style="color: #ed8936; margin-bottom: 8px; font-size: 28px; font-weight: 600;" id="pendingActions">0</h3>
+                <small style="font-size: 13px; color: #718096; font-weight: 500;">Pending Actions</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Management Table -->
+<div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div class="card-header d-flex justify-content-between align-items-center" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+            <i class="fas fa-users me-2" style="color: #2c5282;"></i>User Accounts
+        </h5>
+        <button class="btn btn-sm" onclick="showAddUserModal()" style="background: #2c5282; color: white; border: none; padding: 8px 16px; font-size: 14px; font-weight: 500; border-radius: 6px;">
+            <i class="fas fa-user-plus me-1"></i>Add User
+        </button>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <div class="table-responsive">
+            <table class="table table-hover" id="usersTable" style="margin-bottom: 0;">
+                <thead style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                    <tr>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Username</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Display Name</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Email</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Role</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Status</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Auth Method</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Created</th>
+                        <th style="padding: 12px; font-size: 13px; font-weight: 600; color: #4a5568;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="8" class="text-center py-4" style="color: #718096; font-size: 14px;">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading users...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="alert mt-3 mb-0" style="background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; padding: 12px 16px;">
+            <i class="fas fa-info-circle me-2" style="color: #4299e1;"></i>
+            <strong style="color: #1a202c;">Note:</strong> 
+            <span style="color: #4a5568;">Users cannot be permanently deleted due to audit trail requirements. Click the toggle button to activate or deactivate user accounts. Deactivated users cannot login but their historical records are preserved.</span>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #2c5282; color: white;">
+                <h5 class="modal-title" id="addUserModalLabel">
+                    <i class="fas fa-user-plus me-2"></i>Add New User
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm">
+                    <div class="mb-3">
+                        <label for="add_username" class="form-label">Username <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="add_username" name="username" placeholder="Enter username" required>
+                        <small class="form-text text-muted">Username must be unique and cannot be changed after creation</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="add_auth_method" class="form-label">Authentication Method <span class="text-danger">*</span></label>
+                        <select class="form-select" id="add_auth_method" name="auth_method" required onchange="handleAuthMethodChange()">
+                            <option value="local">Local Authentication</option>
+                            <option value="ad">Active Directory (Windows)</option>
+                        </select>
+                        <small class="form-text text-muted">Local: Uses database password | AD: Uses Windows credentials</small>
+                    </div>
+                    
+                    <div class="mb-3" id="add_password_group">
+                        <label for="add_password" class="form-label">Password <span class="text-danger">*</span></label>
+                        <input type="password" class="form-control" id="add_password" name="password" placeholder="Enter password (min 8 characters)" minlength="8" required>
+                        <small class="form-text text-muted">Password must be at least 8 characters long</small>
+                    </div>
+                    
+                    <div class="mb-3" id="add_display_name_group">
+                        <label for="add_display_name" class="form-label">Display Name <span class="text-danger" id="add_display_name_required">*</span></label>
+                        
+                        <div class="mb-2" id="add_obtain_display_name_group" style="display: none;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="add_obtain_display_name" name="obtain_display_name_on_login" checked onchange="handleObtainDisplayNameChange()">
+                                <label class="form-check-label" for="add_obtain_display_name">
+                                    Obtain display name from Active Directory on first login
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <input type="text" class="form-control" id="add_display_name" name="display_name" placeholder="Enter display name">
+                        <small class="form-text text-muted" id="add_display_name_help">The name shown throughout the application</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="add_email" class="form-label">Email</label>
+                        
+                        <div class="mb-2" id="add_obtain_email_group" style="display: none;">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="add_obtain_email" name="obtain_email_on_login" checked onchange="handleObtainEmailChange()">
+                                <label class="form-check-label" for="add_obtain_email">
+                                    Obtain email from Active Directory on first login
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <input type="email" class="form-control" id="add_email" name="email" placeholder="Enter email address">
+                        <small class="form-text text-muted">Optional email address for notifications</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="add_role" class="form-label">Role <span class="text-danger">*</span></label>
+                        <select class="form-select" id="add_role" name="role" required>
+                            <option value="viewer">Viewer</option>
+                            <option value="operator">Operator</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <small class="form-text text-muted">Viewer: Read-only access | Operator: Can run ETL jobs | Admin: Full access</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="add_is_active" class="form-label">Status</label>
+                        <select class="form-select" id="add_is_active" name="is_active" required>
+                            <option value="1" selected>Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> User creation will be logged in the audit trail for security compliance.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="createUser()">
+                    <i class="fas fa-user-plus me-2"></i>Create User
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: #2c5282; color: white;">
+                <h5 class="modal-title" id="editUserModalLabel">
+                    <i class="fas fa-user-edit me-2"></i>Edit User
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="edit_username" name="username">
+                    
+                    <div class="mb-3">
+                        <label for="edit_display_name" class="form-label">Display Name</label>
+                        <input type="text" class="form-control" id="edit_display_name" name="display_name" placeholder="Enter display name">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="edit_email" name="email" placeholder="Enter email address">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_role" class="form-label">Role</label>
+                        <select class="form-select" id="edit_role" name="role" required>
+                            <option value="viewer">Viewer</option>
+                            <option value="operator">Operator</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <small class="form-text text-muted">Viewer: Read-only access | Operator: Can run ETL jobs | Admin: Full access</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_is_active" class="form-label">Status</label>
+                        <select class="form-select" id="edit_is_active" name="is_active" required>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_password" class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label>
+                        <input type="password" class="form-control" id="edit_password" name="password" placeholder="Enter new password (min 8 characters)" minlength="8">
+                        <small class="form-text text-muted">Only fill this if you want to change the password</small>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Changes will be logged in the audit trail for security compliance.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveUserChanges()">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Load users on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUsers();
+});
+
+let allUsers = [];
+
+async function loadUsers() {
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/users');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        allUsers = data.users || [];
+        
+        // Update stats
+        document.getElementById('totalUsers').textContent = data.total || 0;
+        document.getElementById('activeUsers').textContent = data.active || 0;
+        
+        // Update table
+        updateUsersTable(allUsers);
+    } catch (error) {
+        console.error('Error loading users:', error);
+        showError(`Failed to load users: ${error.message}`);
+    }
+}
+
+function updateUsersTable(users) {
+    const tbody = document.querySelector('#usersTable tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    if (users.length === 0) {
+        const emptyRow = tbody.insertRow();
+        const emptyCell = emptyRow.insertCell();
+        emptyCell.colSpan = 8;
+        emptyCell.className = 'text-center py-4';
+        emptyCell.style.cssText = 'color: #718096; font-size: 14px;';
+        emptyCell.textContent = 'No users found';
+        return;
+    }
+    
+    users.forEach(user => {
+        const row = tbody.insertRow();
+        const isWindowsAuth = user.auth_method === 'ad';
+        const authMethodBadge = isWindowsAuth 
+            ? '<span class="badge bg-primary" style="font-size: 11px; padding: 4px 8px;" title="Windows Authentication (Active Directory)"><i class="fab fa-windows me-1"></i>Windows</span>'
+            : '<span class="badge bg-secondary" style="font-size: 11px; padding: 4px 8px;" title="Local Database Authentication">Local</span>';
+        
+        row.innerHTML = `
+            <td style="padding: 12px; font-size: 14px; font-weight: 500;">${escapeHtml(user.username)}</td>
+            <td style="padding: 12px; font-size: 14px;">${escapeHtml(user.display_name || '-')}</td>
+            <td style="padding: 12px; font-size: 14px;">${escapeHtml(user.email || '-')}</td>
+            <td style="padding: 12px;">
+                <span class="badge ${getRoleBadgeClass(user.role)}" style="font-size: 12px; padding: 4px 8px;">
+                    ${escapeHtml(user.role)}
+                </span>
+            </td>
+            <td style="padding: 12px;">
+                <span class="badge ${user.is_active ? 'bg-success' : 'bg-secondary'}" style="font-size: 12px; padding: 4px 8px;">
+                    ${user.is_active ? 'Active' : 'Inactive'}
+                </span>
+            </td>
+            <td style="padding: 12px;">
+                ${authMethodBadge}
+            </td>
+            <td style="padding: 12px; font-size: 14px;">${user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
+            <td style="padding: 12px;">
+                <button class="btn btn-sm btn-outline-primary" onclick="editUser('${escapeHtml(user.username)}')" title="Edit User">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+            </td>
+        `;
+    });
+}
+
+function getRoleBadgeClass(role) {
+    switch(role) {
+        case 'admin': return 'bg-danger';
+        case 'operator': return 'bg-primary';
+        case 'viewer': return 'bg-info';
+        default: return 'bg-secondary';
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showAddUserModal() {
+    // Reset form
+    const form = document.getElementById('addUserForm');
+    form.reset();
+    
+    // Reset to defaults
+    document.getElementById('add_auth_method').value = 'local';
+    document.getElementById('add_is_active').value = '1';
+    document.getElementById('add_role').value = 'viewer';
+    
+    // Reset checkboxes
+    document.getElementById('add_obtain_display_name').checked = false;
+    document.getElementById('add_obtain_email').checked = false;
+    
+    // Enable all inputs
+    document.getElementById('add_display_name').disabled = false;
+    document.getElementById('add_email').disabled = false;
+    
+    // Handle initial auth method state
+    handleAuthMethodChange();
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('addUserModal'));
+    modal.show();
+}
+
+function handleAuthMethodChange() {
+    const authMethod = document.getElementById('add_auth_method').value;
+    const isAD = authMethod === 'ad';
+    
+    // Password field
+    const passwordGroup = document.getElementById('add_password_group');
+    const passwordInput = document.getElementById('add_password');
+    if (isAD) {
+        passwordGroup.style.display = 'none';
+        passwordInput.removeAttribute('required');
+        passwordInput.value = '';
+    } else {
+        passwordGroup.style.display = 'block';
+        passwordInput.setAttribute('required', 'required');
+    }
+    
+    // Display name
+    const displayNameGroup = document.getElementById('add_display_name_group');
+    const displayNameInput = document.getElementById('add_display_name');
+    const displayNameRequired = document.getElementById('add_display_name_required');
+    const displayNameHelp = document.getElementById('add_display_name_help');
+    const obtainDisplayNameGroup = document.getElementById('add_obtain_display_name_group');
+    const obtainDisplayNameCheckbox = document.getElementById('add_obtain_display_name');
+    
+    if (isAD) {
+        displayNameRequired.style.display = 'none';
+        displayNameInput.removeAttribute('required');
+        displayNameHelp.textContent = 'Optional: Enter display name or obtain from AD on first login';
+        obtainDisplayNameGroup.style.display = 'block';
+        // Check by default for AD
+        obtainDisplayNameCheckbox.checked = true;
+        handleObtainDisplayNameChange();
+    } else {
+        displayNameRequired.style.display = 'inline';
+        displayNameInput.setAttribute('required', 'required');
+        displayNameHelp.textContent = 'The name shown throughout the application';
+        obtainDisplayNameGroup.style.display = 'none';
+        obtainDisplayNameCheckbox.checked = false;
+        displayNameInput.disabled = false;
+    }
+    
+    // Email
+    const obtainEmailGroup = document.getElementById('add_obtain_email_group');
+    const obtainEmailCheckbox = document.getElementById('add_obtain_email');
+    if (isAD) {
+        obtainEmailGroup.style.display = 'block';
+        // Check by default for AD
+        obtainEmailCheckbox.checked = true;
+        handleObtainEmailChange();
+    } else {
+        obtainEmailGroup.style.display = 'none';
+        obtainEmailCheckbox.checked = false;
+        document.getElementById('add_email').disabled = false;
+    }
+}
+
+function handleObtainDisplayNameChange() {
+    const checkbox = document.getElementById('add_obtain_display_name');
+    const input = document.getElementById('add_display_name');
+    if (checkbox && input) {
+        input.disabled = checkbox.checked;
+        if (checkbox.checked) {
+            input.value = '';
+        }
+    }
+}
+
+function handleObtainEmailChange() {
+    const checkbox = document.getElementById('add_obtain_email');
+    const input = document.getElementById('add_email');
+    if (checkbox && input) {
+        input.disabled = checkbox.checked;
+        if (checkbox.checked) {
+            input.value = '';
+        }
+    }
+}
+
+async function createUser() {
+    const form = document.getElementById('addUserForm');
+    const formData = new FormData(form);
+    
+    // Get values
+    const username = formData.get('username')?.trim();
+    const displayName = formData.get('display_name')?.trim() || '';
+    const email = formData.get('email')?.trim() || '';
+    const password = formData.get('password') || '';
+    const role = formData.get('role');
+    const authMethod = formData.get('auth_method');
+    const isActive = formData.get('is_active');
+    const obtainDisplayName = document.getElementById('add_obtain_display_name').checked;
+    const obtainEmail = document.getElementById('add_obtain_email').checked;
+    
+    // Validate required fields
+    if (!username || !role || !authMethod) {
+        showError('Please fill in all required fields');
+        return;
+    }
+    
+    // Validate username format (basic check)
+    if (username.length < 3) {
+        showError('Username must be at least 3 characters long');
+        return;
+    }
+    
+    // Check if username already exists
+    try {
+        const checkResponse = await fetchWithRoleCheck('/api/admin/users');
+        if (checkResponse.ok) {
+            const checkData = await checkResponse.json();
+            const exists = checkData.users?.some(user => 
+                user.username.toLowerCase() === username.toLowerCase()
+            );
+            if (exists) {
+                showError('Username already exists. Please choose a different username.');
+                return;
+            }
+        }
+    } catch (error) {
+        console.error('Error checking username:', error);
+        // Continue with creation attempt
+    }
+    
+    // Handle AD special cases
+    let finalDisplayName = displayName;
+    let finalEmail = email;
+    
+    if (authMethod === 'ad') {
+        if (obtainDisplayName) {
+            finalDisplayName = '__OBTAIN_FROM_AD__';
+        } else if (!displayName) {
+            showError('Please enter a display name or check "Obtain from Active Directory on first login"');
+            return;
+        }
+        
+        if (obtainEmail) {
+            finalEmail = '__OBTAIN_FROM_AD__';
+        }
+    } else {
+        // Local auth validation
+        if (!displayName) {
+            showError('Display name is required for local authentication');
+            return;
+        }
+        
+        if (!password || password.length < 8) {
+            showError('Password must be at least 8 characters long');
+            return;
+        }
+    }
+    
+    // Build request data
+    const requestData = new FormData();
+    requestData.append('username', username);
+    requestData.append('display_name', finalDisplayName);
+    requestData.append('email', finalEmail);
+    requestData.append('password', password);
+    requestData.append('role', role);
+    requestData.append('auth_method', authMethod);
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/users', {
+            method: 'POST',
+            body: requestData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message || 'User created successfully');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addUserModal'));
+            modal.hide();
+            
+            // Reload users
+            await loadUsers();
+            
+            // Refresh nav pill to update user count
+            if (typeof window.refreshNavPill === 'function') {
+                window.refreshNavPill('users');
+            }
+        } else {
+            showError(data.error || 'Failed to create user');
+        }
+    } catch (error) {
+        console.error('Error creating user:', error);
+        showError(`Failed to create user: ${error.message}`);
+    }
+}
+
+async function editUser(username) {
+    try {
+        // Fetch user details
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch user details: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (!data.success || !data.user) {
+            throw new Error('User not found');
+        }
+        
+        const user = data.user;
+        
+        // Populate form
+        document.getElementById('edit_username').value = user.username;
+        document.getElementById('edit_display_name').value = user.display_name || '';
+        document.getElementById('edit_email').value = user.email || '';
+        document.getElementById('edit_role').value = user.role || 'viewer';
+        document.getElementById('edit_is_active').value = user.is_active ? '1' : '0';
+        document.getElementById('edit_password').value = '';
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('editUserModal'));
+        modal.show();
+    } catch (error) {
+        console.error('Error loading user details:', error);
+        showError(`Failed to load user details: ${error.message}`);
+    }
+}
+
+async function saveUserChanges() {
+    const form = document.getElementById('editUserForm');
+    const formData = new FormData(form);
+    const username = formData.get('username');
+    
+    // Validate password if provided
+    const password = formData.get('password');
+    if (password && password.length < 8) {
+        showError('Password must be at least 8 characters long');
+        return;
+    }
+    
+    // Build update data (only include fields that have values)
+    const updateData = new FormData();
+    updateData.append('display_name', formData.get('display_name') || '');
+    updateData.append('email', formData.get('email') || '');
+    updateData.append('role', formData.get('role'));
+    updateData.append('is_active', formData.get('is_active'));
+    if (password) {
+        updateData.append('password', password);
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+            method: 'PUT',
+            body: updateData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message || 'User updated successfully');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUserModal'));
+            modal.hide();
+            
+            // Reload users
+            await loadUsers();
+            
+            // Refresh nav pill to update user count
+            if (typeof window.refreshNavPill === 'function') {
+                window.refreshNavPill('users');
+            }
+        } else {
+            showError(data.error || 'Failed to update user');
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        showError(`Failed to update user: ${error.message}`);
+    }
+}
+
+function showSuccess(message) {
+    // Create or update success alert
+    let alertDiv = document.getElementById('successAlert');
+    if (!alertDiv) {
+        alertDiv = document.createElement('div');
+        alertDiv.id = 'successAlert';
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.style.cssText = 'position: fixed; top: 70px; right: 20px; z-index: 9999; min-width: 300px;';
+        document.body.appendChild(alertDiv);
+    }
+    
+    alertDiv.innerHTML = `
+        <i class="fas fa-check-circle me-2"></i>${escapeHtml(message)}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function showError(message) {
+    // Create or update error alert
+    let alertDiv = document.getElementById('errorAlert');
+    if (!alertDiv) {
+        alertDiv = document.createElement('div');
+        alertDiv.id = 'errorAlert';
+        alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+        alertDiv.style.cssText = 'position: fixed; top: 70px; right: 20px; z-index: 9999; min-width: 300px;';
+        document.body.appendChild(alertDiv);
+    }
+    
+    alertDiv.innerHTML = `
+        <i class="fas fa-exclamation-circle me-2"></i>${escapeHtml(message)}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Auto-dismiss after 7 seconds
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 7000);
+}
+</script>
+{% endblock %}
+

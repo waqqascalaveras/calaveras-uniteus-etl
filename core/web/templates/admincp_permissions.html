@@ -1,0 +1,255 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Permissions Grid
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Permissions grid showing what each role (Admin, Operator, Viewer) can access
+    in the system.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'permissions' %}
+{% set page_title = 'Permissions' %}
+{% set page_icon = 'key' %}
+{% set page_description = 'View role-based permissions and access control' %}
+
+{% block admin_content %}
+<div class="container-fluid" style="padding: 0;">
+    <!-- Role Descriptions -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-body" style="padding: 20px;">
+                    <h5 style="color: #dc3545; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-user-shield me-2"></i>Admin
+                    </h5>
+                    <p style="font-size: 13px; color: #4a5568; margin: 0;">
+                        Full system access including user management, ETL operations, configuration, and all administrative functions.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-body" style="padding: 20px;">
+                    <h5 style="color: #2c5282; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-user-cog me-2"></i>Operator
+                    </h5>
+                    <p style="font-size: 13px; color: #4a5568; margin: 0;">
+                        Can run ETL jobs, view data, access database viewer, import data, and view ETL logs. Cannot manage users or access admin functions.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div class="card-body" style="padding: 20px;">
+                    <h5 style="color: #17a2b8; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-user me-2"></i>Viewer
+                    </h5>
+                    <p style="font-size: 13px; color: #4a5568; margin: 0;">
+                        Read-only access to the dashboard with reports and analytics. Cannot access data import, ETL operations, or administrative functions.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permissions Grid -->
+    <div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <div class="card-header" style="background: white; border-bottom: 2px solid #e2e8f0; padding: 20px 24px;">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-table me-2" style="color: #2c5282;"></i>Access Control Matrix
+            </h5>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="permissionsTable">
+                    <thead style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <tr>
+                            <th style="padding: 16px; font-size: 13px; font-weight: 600; color: #4a5568; width: 30%;">Feature / Page</th>
+                            <th style="padding: 16px; font-size: 13px; font-weight: 600; color: #dc3545; text-align: center; width: 23.33%;">Admin</th>
+                            <th style="padding: 16px; font-size: 13px; font-weight: 600; color: #2c5282; text-align: center; width: 23.33%;">Operator</th>
+                            <th style="padding: 16px; font-size: 13px; font-weight: 600; color: #17a2b8; text-align: center; width: 23.33%;">Viewer</th>
+                        </tr>
+                    </thead>
+                    <tbody id="permissionsTableBody">
+                        <!-- Content will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="mt-4">
+        <div class="alert" style="background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 6px; padding: 16px;">
+            <h6 style="font-weight: 600; color: #1a202c; margin-bottom: 12px;">
+                <i class="fas fa-info-circle me-2" style="color: #4299e1;"></i>Legend
+            </h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-check-circle me-2" style="color: #48bb78; font-size: 16px;"></i>
+                        <span style="font-size: 13px; color: #4a5568;">Full Access</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-times-circle me-2" style="color: #f56565; font-size: 16px;"></i>
+                        <span style="font-size: 13px; color: #4a5568;">No Access</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-eye me-2" style="color: #ed8936; font-size: 16px;"></i>
+                        <span style="font-size: 13px; color: #4a5568;">Read-Only Access</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-lock me-2" style="color: #718096; font-size: 16px;"></i>
+                        <span style="font-size: 13px; color: #4a5568;">Restricted (Admin Only)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Permissions data structure
+const permissionsData = [
+    // Main Pages
+    { feature: "Dashboard", category: "Main Pages", admin: "full", operator: "full", viewer: "readonly", description: "Main dashboard with reports and analytics" },
+    { feature: "Database Viewer", category: "Main Pages", admin: "full", operator: "full", viewer: "none", description: "Browse and query database tables" },
+    { feature: "ETL Logs", category: "Main Pages", admin: "full", operator: "full", viewer: "none", description: "View ETL job history and logs" },
+    { feature: "Data Import", category: "Main Pages", admin: "full", operator: "full", viewer: "none", description: "Upload and import data files" },
+    { feature: "Data Cleaning", category: "Main Pages", admin: "full", operator: "full", viewer: "none", description: "Data cleaning documentation" },
+    { feature: "About", category: "Main Pages", admin: "full", operator: "full", viewer: "none", description: "System information and technologies" },
+    { feature: "Settings", category: "Main Pages", admin: "full", operator: "full", viewer: "none", description: "User settings and preferences" },
+    
+    // Admin Control Panel
+    { feature: "Admin Control Panel", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "Main admin dashboard" },
+    { feature: "User Management", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "Create, edit, and manage user accounts" },
+    { feature: "Permissions", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "View permissions grid (this page)" },
+    { feature: "Audit Log", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "View system audit trail" },
+    { feature: "SFTP Integration", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "Configure SFTP connections" },
+    { feature: "SIEM Integration", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "Configure SIEM logging" },
+    { feature: "Windows Event Log", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "View Windows Event Log entries" },
+    { feature: "JSON Log Files", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "View and download JSON log files" },
+    { feature: "Database Settings", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "Database configuration" },
+    { feature: "Configuration", category: "Admin Control Panel", admin: "full", operator: "none", viewer: "none", description: "System configuration" },
+    
+    // ETL Operations
+    { feature: "Start ETL Job", category: "ETL Operations", admin: "full", operator: "full", viewer: "none", description: "Start new ETL processing jobs" },
+    { feature: "Cancel ETL Job", category: "ETL Operations", admin: "full", operator: "full", viewer: "none", description: "Cancel running ETL jobs" },
+    { feature: "View ETL Status", category: "ETL Operations", admin: "full", operator: "full", viewer: "none", description: "View current ETL job status" },
+    { feature: "ETL History", category: "ETL Operations", admin: "full", operator: "full", viewer: "none", description: "View past ETL job history" },
+    { feature: "Undo ETL Job", category: "ETL Operations", admin: "full", operator: "full", viewer: "none", description: "Undo/rollback ETL job results" },
+    
+    // Data Operations
+    { feature: "Query Database", category: "Data Operations", admin: "full", operator: "full", viewer: "none", description: "Execute database queries" },
+    { feature: "Export Data", category: "Data Operations", admin: "full", operator: "full", viewer: "none", description: "Export tables and data" },
+    { feature: "Upload Files", category: "Data Operations", admin: "full", operator: "full", viewer: "none", description: "Upload data files" },
+    { feature: "View Reports", category: "Data Operations", admin: "full", operator: "full", viewer: "readonly", description: "View analytics and reports" },
+    
+    // API Endpoints
+    { feature: "Reports API", category: "API Endpoints", admin: "full", operator: "full", viewer: "readonly", description: "Access to /api/reports/* endpoints" },
+    { feature: "ETL API", category: "API Endpoints", admin: "full", operator: "full", viewer: "none", description: "Access to /api/etl/* endpoints" },
+    { feature: "Database API", category: "API Endpoints", admin: "full", operator: "full", viewer: "none", description: "Access to /api/database/* endpoints" },
+    { feature: "Admin API", category: "API Endpoints", admin: "full", operator: "none", viewer: "none", description: "Access to /api/admin/* endpoints" },
+    { feature: "Auth API", category: "API Endpoints", admin: "full", operator: "full", viewer: "full", description: "Access to /api/auth/* endpoints" }
+];
+
+// Group permissions by category
+const groupedPermissions = {};
+permissionsData.forEach(perm => {
+    if (!groupedPermissions[perm.category]) {
+        groupedPermissions[perm.category] = [];
+    }
+    groupedPermissions[perm.category].push(perm);
+});
+
+// Render permissions table
+function renderPermissionsTable() {
+    const tbody = document.getElementById('permissionsTableBody');
+    tbody.innerHTML = '';
+    
+    // Sort categories for display
+    const categoryOrder = [
+        "Main Pages",
+        "Admin Control Panel",
+        "ETL Operations",
+        "Data Operations",
+        "API Endpoints"
+    ];
+    
+    categoryOrder.forEach(category => {
+        if (!groupedPermissions[category]) return;
+        
+        // Category header row
+        const categoryRow = document.createElement('tr');
+        categoryRow.style.cssText = 'background: #f7fafc; border-top: 2px solid #e2e8f0;';
+        categoryRow.innerHTML = `
+            <td colspan="4" style="padding: 12px 16px; font-weight: 600; color: #2c5282; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">
+                <i class="fas fa-folder me-2"></i>${category}
+            </td>
+        `;
+        tbody.appendChild(categoryRow);
+        
+        // Permissions in this category
+        groupedPermissions[category].forEach(perm => {
+            const row = document.createElement('tr');
+            row.style.cssText = 'border-bottom: 1px solid #e2e8f0;';
+            row.innerHTML = `
+                <td style="padding: 14px 16px;">
+                    <div style="font-weight: 500; color: #1a202c; font-size: 14px; margin-bottom: 4px;">
+                        ${escapeHtml(perm.feature)}
+                    </div>
+                    <small style="color: #718096; font-size: 12px;">
+                        ${escapeHtml(perm.description)}
+                    </small>
+                </td>
+                <td style="padding: 14px 16px; text-align: center;">
+                    ${renderAccessIcon(perm.admin)}
+                </td>
+                <td style="padding: 14px 16px; text-align: center;">
+                    ${renderAccessIcon(perm.operator)}
+                </td>
+                <td style="padding: 14px 16px; text-align: center;">
+                    ${renderAccessIcon(perm.viewer)}
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    });
+}
+
+function renderAccessIcon(accessLevel) {
+    switch(accessLevel) {
+        case 'full':
+            return '<i class="fas fa-check-circle" style="color: #48bb78; font-size: 18px;" title="Full Access"></i>';
+        case 'readonly':
+            return '<i class="fas fa-eye" style="color: #ed8936; font-size: 18px;" title="Read-Only Access"></i>';
+        case 'none':
+            return '<i class="fas fa-times-circle" style="color: #f56565; font-size: 18px;" title="No Access"></i>';
+        default:
+            return '<i class="fas fa-question-circle" style="color: #718096; font-size: 18px;"></i>';
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    renderPermissionsTable();
+});
+</script>
+{% endblock %}
+

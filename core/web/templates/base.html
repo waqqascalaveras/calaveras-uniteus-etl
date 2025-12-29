@@ -1,0 +1,378 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Base Template
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Base HTML template providing common layout, navigation, and styling
+    for all pages in the UniteUs ETL application.
+================================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - Calaveras UniteUs ETL</title>
+    
+    <!-- Resource Hints for Performance Optimization (LAN deployment - aggressive) -->
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="/static/css/style.css" as="style">
+    <link rel="preload" href="/static/js/common.js" as="script">
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style" crossorigin>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style" crossorigin>
+    
+    <!-- Preload Font Awesome Fonts (for icons) -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-regular-400.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/webfonts/fa-brands-400.woff2" as="font" type="font/woff2" crossorigin>
+    
+    <!-- Initial prefetch for critical resources (more will be added by JavaScript) -->
+    <link rel="prefetch" href="/database">
+    <link rel="prefetch" href="/etl-logs">
+    <link rel="prefetch" href="/data-import">
+    
+    <!-- Stylesheets -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" crossorigin>
+    <link href="/static/css/style.css" rel="stylesheet">
+    
+    <!-- Chart.js for visualizations - Preload and defer -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" as="script" crossorigin>
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" as="script" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0" defer crossorigin></script>
+</head>
+<body>
+    <!-- Navigation - Sticky Top -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-database me-2"></i>
+                Calaveras UniteUs ETL
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path == '/' or request.url.path == '' %}active{% endif %}" href="/">
+                            <i class="fas fa-chart-bar me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path.startswith('/database') and not request.url.path.startswith('/admincp') %}active{% endif %}" href="/database">
+                            <i class="fas fa-table me-1"></i>Database
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path.startswith('/etl-logs') %}active{% endif %}" href="/etl-logs">
+                            <i class="fas fa-list-alt me-1"></i>ETL Logs
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path.startswith('/data-import') %}active{% endif %}" href="/data-import">
+                            <i class="fas fa-upload me-1"></i>Data Import
+                        </a>
+                    </li>
+                    {% if user and user.role.value == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.url.path.startswith('/admincp') %}active{% endif %}" href="/admincp">
+                            <i class="fas fa-cog me-1"></i>AdminCP
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+                
+                <div class="navbar-nav">
+                    {% if user %}
+                    <div class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: #fff; font-weight: 500;">
+                            <i class="fas fa-user-circle me-1"></i>
+                            {{ user.display_name or user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <h6 class="dropdown-header">
+                                    <i class="fas fa-user me-2"></i>{{ user.username }}
+                                    <br><small class="text-muted">Role: {{ user.role.value }}</small>
+                                </h6>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="/settings">
+                                    <i class="fas fa-sliders-h me-2"></i>Settings
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="/logout" method="post" class="dropdown-item-form">
+                                    <button type="submit" class="dropdown-item" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Sign Out
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container-fluid py-4" style="padding-top: 1rem !important;">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light py-3 mt-5">
+        <div class="container-fluid text-center text-muted">
+            <small>
+                <a href="/about" class="text-decoration-none text-muted footer-link" style="cursor: pointer; transition: color 0.2s;">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Calaveras UniteUs ETL - Built with FastAPI & Bootstrap
+                </a>
+            </small>
+        </div>
+    </footer>
+
+    <style>
+        .footer-link:hover {
+            color: #0d6efd !important;
+        }
+        
+        /* Navbar brand hover effect */
+        .navbar-brand {
+            transition: all 0.3s ease;
+            text-shadow: 0 0 0 transparent;
+        }
+        
+        .navbar-brand:hover {
+            color: #ffd700 !important;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        /* Sticky navbar styling */
+        .navbar.sticky-top {
+            z-index: 1030;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        /* Active nav link styling */
+        .navbar-nav .nav-link.active {
+            font-weight: 600;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        .navbar-nav .nav-link.active:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        
+        /* Ensure content doesn't get hidden behind sticky navbar */
+        body {
+            padding-top: 0;
+        }
+        
+        /* Clean table hover - only background color change, no layout shifts */
+        .table-hover tbody tr:hover {
+            background-color: rgba(0, 0, 0, 0.075);
+        }
+        
+        /* Ensure table stays within container - no horizontal scrollbars */
+        .table-responsive {
+            overflow-x: hidden;
+            overflow-y: visible;
+        }
+    </style>
+
+    <!-- Preload Bootstrap JS -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" as="script" crossorigin>
+    
+    <!-- Bootstrap JS - Load with defer for non-blocking -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer crossorigin></script>
+    
+    <!-- User role for frontend access control -->
+    {% if user %}
+    <script>
+        // Make user role available to JavaScript
+        window.currentUserRole = '{{ user.role.value }}';
+        window.currentUsername = '{{ user.username }}';
+        
+        // Utility function to check if user has admin access
+        function hasAdminAccess() {
+            return window.currentUserRole === 'admin';
+        }
+        
+        // Utility function to check if user has operator or admin access
+        function hasOperatorAccess() {
+            return window.currentUserRole === 'admin' || window.currentUserRole === 'operator';
+        }
+        
+        // Utility function to check if user is new user (no permissions)
+        function isNewUser() {
+            return window.currentUserRole === 'new_user';
+        }
+        
+        // Wrapper for fetch that checks admin access before making admin API calls
+        async function fetchWithRoleCheck(url, options = {}) {
+            // Check if this is an admin endpoint
+            if (url.includes('/api/admin/') || url.includes('/api/settings/')) {
+                if (!hasAdminAccess()) {
+                    console.warn(`Access denied: User role '${window.currentUserRole}' cannot access ${url}`);
+                    return {
+                        ok: false,
+                        status: 403,
+                        statusText: 'Forbidden',
+                        json: async () => ({ error: 'Admin access required' })
+                    };
+                }
+            }
+            return fetch(url, options);
+        }
+        
+        // Aggressive session-based preloading - runs immediately after page load
+        (function aggressivePreload() {
+            // Wait for page to be interactive
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', aggressivePreload);
+                return;
+            }
+            
+            // Preload based on user role
+            const resourcesToPreload = [];
+            
+            // Common resources for all users
+            resourcesToPreload.push(
+                '/static/js/charts/overview.js',
+                '/static/js/charts/demographics.js',
+                '/static/js/reports/performance.js',
+                '/static/js/reports/services.js',
+                '/static/js/reports/network.js',
+                '/static/js/reports/outcomes.js',
+                '/static/js/reports/geographic.js',
+                '/static/js/reports/advanced.js',
+                '/static/js/filters/filters.js',
+                '/static/js/utils/utils.js',
+                '/static/js/main.js'
+            );
+            
+            // Admin-specific resources
+            if (hasAdminAccess()) {
+                // Preload all AdminCP pages
+                resourcesToPreload.push(
+                    '/admincp',
+                    '/admincp/users',
+                    '/admincp/audit',
+                    '/admincp/sftp',
+                    '/admincp/logging/windows',
+                    '/admincp/logging/json',
+                    '/admincp/logging/siem',
+                    '/admincp/database',
+                    '/admincp/database/schema',
+                    '/admincp/permissions',
+                    '/admincp/dashboard'
+                );
+                
+                // Preload AdminCP static resources (if any exist)
+                // Preload common admin API endpoints
+                resourcesToPreload.push(
+                    '/api/admin/users',
+                    '/api/admin/system-info',
+                    '/api/admin/audit-statistics',
+                    '/api/settings/sftp',
+                    '/api/settings/siem',
+                    '/api/admin/logging/windows/status',
+                    '/api/admin/logging/json/status'
+                );
+            }
+            
+            // Common pages for all authenticated users
+            resourcesToPreload.push(
+                '/database',
+                '/etl-logs',
+                '/data-import'
+            );
+            
+            // Preload all resources with low priority (don't block page)
+            // Batch resources to avoid overwhelming the browser
+            const batchSize = 5;
+            let batchIndex = 0;
+            
+            function preloadBatch() {
+                const batch = resourcesToPreload.slice(batchIndex, batchIndex + batchSize);
+                batch.forEach(resource => {
+                    const link = document.createElement('link');
+                    link.rel = 'prefetch';
+                    link.href = resource;
+                    link.as = resource.endsWith('.js') ? 'script' : 
+                             resource.endsWith('.css') ? 'style' : 
+                             resource.startsWith('/api/') ? 'fetch' : 'document';
+                    document.head.appendChild(link);
+                });
+                batchIndex += batchSize;
+                
+                if (batchIndex < resourcesToPreload.length) {
+                    // Load next batch after a short delay
+                    setTimeout(preloadBatch, 100);
+                } else if (hasAdminAccess()) {
+                    // After all prefetches, preload admin API data in background
+                    setTimeout(() => {
+                        const adminAPIs = [
+                            '/api/admin/users',
+                            '/api/admin/system-info',
+                            '/api/settings/sftp',
+                            '/api/settings/siem',
+                            '/api/admin/logging/windows/status',
+                            '/api/admin/logging/json/status'
+                        ];
+                        
+                        // Batch API calls too
+                        adminAPIs.forEach((api, index) => {
+                            setTimeout(() => {
+                                fetch(api, { 
+                                    method: 'GET',
+                                    cache: 'default'
+                                }).catch(() => {}); // Ignore errors
+                            }, index * 200); // Stagger API calls
+                        });
+                    }, 500);
+                }
+            }
+            
+            // Start preloading after a short delay to not interfere with page load
+            setTimeout(preloadBatch, 500);
+        })();
+    </script>
+    {% else %}
+    <script>
+        window.currentUserRole = null;
+        window.currentUsername = null;
+        function hasAdminAccess() { return false; }
+        function hasOperatorAccess() { return false; }
+        function isNewUser() { return false; }
+        async function fetchWithRoleCheck(url, options = {}) {
+            return fetch(url, options);
+        }
+    </script>
+    {% endif %}
+    
+    <!-- Common JS - Load with defer for non-blocking -->
+    <script src="/static/js/common.js" defer></script>
+    
+    <!-- Page-specific JS -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>

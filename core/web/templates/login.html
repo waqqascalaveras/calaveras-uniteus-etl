@@ -1,0 +1,464 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Login Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    User authentication page supporting Active Directory and local database
+    authentication with secure session management.
+================================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Calaveras UniteUs ETL</title>
+    
+    <!-- Resource Hints for Performance -->
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" as="style" crossorigin>
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" as="style" crossorigin>
+    
+    <!-- Prefetch Dashboard (likely next page) -->
+    <link rel="prefetch" href="/">
+    <link rel="prefetch" href="/static/css/style.css">
+    <link rel="prefetch" href="/static/js/common.js">
+    
+    <!-- Stylesheets -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin>
+    <style>
+        body {
+            background: #f5f7fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .login-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 48px 40px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .login-header .logo {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            background: linear-gradient(135deg, #2c5282 0%, #1a365d 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+        }
+        
+        .login-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        
+        .login-header .subtitle {
+            color: #718096;
+            font-size: 14px;
+            font-weight: 400;
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-control {
+            padding: 11px 16px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            font-size: 14px;
+            transition: all 0.2s;
+            height: 42px;
+        }
+        
+        .form-control:focus {
+            border-color: #2c5282;
+            box-shadow: 0 0 0 3px rgba(44, 82, 130, 0.1);
+            outline: none;
+        }
+        
+        .input-group-text {
+            background: #f7fafc;
+            border: 1px solid #cbd5e0;
+            border-right: none;
+            border-radius: 6px 0 0 6px;
+            color: #718096;
+        }
+        
+        .input-group .form-control {
+            border-left: none;
+            border-radius: 0 6px 6px 0;
+        }
+        
+        .input-group .form-control:focus {
+            border-left: 1px solid #2c5282;
+        }
+        
+        .btn-login {
+            background: #2c5282;
+            border: none;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: all 0.2s;
+            height: 44px;
+        }
+        
+        .btn-login:hover {
+            background: #1a365d;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(44, 82, 130, 0.2);
+        }
+        
+        .alert {
+            border-radius: 6px;
+            border: 1px solid;
+            font-size: 14px;
+            padding: 12px 16px;
+        }
+        
+        .alert-danger {
+            background: #fff5f5;
+            border-color: #feb2b2;
+            color: #c53030;
+        }
+        
+        .alert-warning {
+            background: #fffaf0;
+            border-color: #fbd38d;
+            color: #c05621;
+        }
+        
+        .alert-success {
+            background: #f0fff4;
+            border-color: #9ae6b4;
+            color: #2f855a;
+        }
+        
+        .footer-text {
+            text-align: center;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .footer-text small {
+            color: #718096;
+            display: block;
+            line-height: 1.5;
+            font-size: 13px;
+        }
+        
+        .password-toggle {
+            cursor: pointer;
+            color: #718096;
+            transition: color 0.2s;
+            background: #f7fafc;
+            border: 1px solid #cbd5e0;
+            border-left: none;
+        }
+        
+        .password-toggle:hover {
+            color: #2d3748;
+        }
+        
+        /* Auth Method Selection Tabs */
+        .auth-method-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 4px;
+            background: #f7fafc;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .auth-method-option {
+            flex: 1;
+            position: relative;
+        }
+        
+        .auth-method-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .auth-method-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 14px;
+            color: #4a5568;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+        
+        .auth-method-label:hover {
+            background: white;
+            color: #2d3748;
+        }
+        
+        .auth-method-option input[type="radio"]:checked + .auth-method-label {
+            background: white;
+            color: #2c5282;
+            border-color: #2c5282;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .auth-method-icon {
+            font-size: 16px;
+            margin-right: 6px;
+        }
+        
+        .auth-hint {
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: #edf2f7;
+            border-radius: 6px;
+            border-left: 3px solid #2c5282;
+        }
+        
+        .form-text {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">
+                    <i class="fas fa-hospital" style="color: white;"></i>
+                </div>
+                <h1>Calaveras UniteUs ETL</h1>
+                <p class="subtitle">Health & Human Services Agency</p>
+            </div>
+
+            {% if request.query_params.get('error') == 'invalid_credentials' %}
+            <div class="alert alert-danger" role="alert">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Login Failed:</strong> Invalid username or password. Please try again.
+            </div>
+            {% elif request.query_params.get('error') == 'unauthorized_network' %}
+            <div class="alert alert-danger" role="alert">
+                <i class="fas fa-ban"></i>
+                <strong>Access Denied:</strong> You must be on the authorized network.
+            </div>
+            {% elif request.query_params.get('error') == 'session_expired' %}
+            <div class="alert alert-warning" role="alert">
+                <i class="fas fa-clock"></i>
+                <strong>Session Expired:</strong> Please log in again.
+            </div>
+            {% elif request.query_params.get('message') == 'logged_out' %}
+            <div class="alert alert-success" role="alert">
+                <i class="fas fa-check-circle"></i>
+                <strong>Logged Out:</strong> You have been successfully logged out.
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/login" id="loginForm">
+                <!-- Authentication Method Selection -->
+                <div class="auth-method-selector">
+                    <div class="auth-method-option">
+                        <input 
+                            type="radio" 
+                            id="auth_ad" 
+                            name="auth_method" 
+                            value="ad" 
+                            checked
+                            onchange="updateAuthHint()"
+                        >
+                        <label for="auth_ad" class="auth-method-label">
+                            <i class="fas fa-building auth-method-icon"></i>
+                            <span>Windows Login</span>
+                        </label>
+                    </div>
+                    <div class="auth-method-option">
+                        <input 
+                            type="radio" 
+                            id="auth_local" 
+                            name="auth_method" 
+                            value="local"
+                            onchange="updateAuthHint()"
+                        >
+                        <label for="auth_local" class="auth-method-label">
+                            <i class="fas fa-key auth-method-icon"></i>
+                            <span>Direct Login</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="auth-hint" id="authHint">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Windows Login:</strong> Use your Active Directory credentials (domain account)
+                </div>
+
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-user"></i>
+                        </span>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="username" 
+                            name="username" 
+                            placeholder="Enter username"
+                            required 
+                            autofocus
+                            autocomplete="username"
+                        >
+                    </div>
+                    <small class="form-text" id="usernameHint">
+                        Use your Windows username (e.g., WHanafi)
+                    </small>
+                </div>
+
+                <div class="mb-4">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        <input 
+                            type="password" 
+                            class="form-control" 
+                            id="password" 
+                            name="password" 
+                            placeholder="Enter password"
+                            required
+                            autocomplete="current-password"
+                        >
+                        <span class="input-group-text password-toggle" onclick="togglePassword()">
+                            <i class="fas fa-eye" id="toggleIcon"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-login w-100">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="footer-text">
+                <small>
+                    Calaveras County Health & Human Services Agency<br>
+                    Authorized Access Only
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- IE and Chrome compatible JavaScript -->
+    <script>
+        // Update auth hints based on selected method
+        function updateAuthHint() {
+            var authHint = document.getElementById('authHint');
+            var usernameHint = document.getElementById('usernameHint');
+            var isAD = document.getElementById('auth_ad').checked;
+            
+            if (isAD) {
+                authHint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Windows Login:</strong> Use your Active Directory credentials (domain account)';
+                usernameHint.textContent = 'Use your Windows username (e.g., WHanafi)';
+            } else {
+                authHint.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Direct Login:</strong> Use local application account (e.g., admin)';
+                usernameHint.textContent = 'Use your local application username (e.g., admin)';
+            }
+        }
+        
+        // IE-compatible toggle password function
+        function togglePassword() {
+            var passwordInput = document.getElementById('password');
+            var toggleIcon = document.getElementById('toggleIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.className = toggleIcon.className.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.className = toggleIcon.className.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+        
+        // Auto-focus on username field (IE compatible)
+        window.onload = function() {
+            var usernameField = document.getElementById('username');
+            if (usernameField) {
+                usernameField.focus();
+            }
+            
+            // Clear error messages after 5 seconds (IE compatible)
+            setTimeout(function() {
+                var alerts = document.querySelectorAll('.alert');
+                for (var i = 0; i < alerts.length; i++) {
+                    alerts[i].style.animation = 'fadeOut 0.5s';
+                    (function(alert) {
+                        setTimeout(function() {
+                            if (alert.parentNode) {
+                                alert.parentNode.removeChild(alert);
+                            }
+                        }, 500);
+                    })(alerts[i]);
+                }
+            }, 5000);
+        };
+    </script>
+    
+    <style>
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</body>
+</html>

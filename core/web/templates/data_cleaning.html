@@ -1,0 +1,770 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Data Cleaning Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Data cleaning interface for viewing and managing data quality issues,
+    cleaning rules, and data validation results.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Print-specific styles for PDF export */
+@media print {
+    /* Hide non-essential elements */
+    .navbar, .sidebar, .no-print {
+        display: none !important;
+    }
+    
+    /* Remove scroll behavior from table-responsive */
+    .table-responsive {
+        overflow: visible !important;
+        display: block !important;
+    }
+    
+    /* Ensure tables display full width without scrolling */
+    .table-responsive table {
+        width: 100% !important;
+        table-layout: auto !important;
+    }
+    
+    /* Prevent content from breaking across pages */
+    .alert {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    /* Allow cards to break if necessary for long content */
+    .card {
+        page-break-inside: auto;
+        break-inside: auto;
+    }
+    
+    /* Prevent breaks right after headings */
+    h1, h2, h3, h4, h5, h6 {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+    
+    /* Keep card headers with content */
+    .card-header {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+    
+    /* Keep table rows together when possible */
+    tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    /* Adjust margins for print */
+    body {
+        margin: 0.4in 0.5in;
+    }
+    
+    /* Ensure proper spacing between sections */
+    .card {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .row.mb-4 {
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* Make sure the database structure tables stay together when possible */
+    .col-md-4 > .mb-4 {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    /* Remove shadows and borders that don't print well */
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+    
+    /* Ensure colored headers print properly */
+    .card-header {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    /* Adjust font sizes for print */
+    body {
+        font-size: 9pt;
+        line-height: 1.2;
+    }
+    
+    .lead {
+        font-size: 10pt;
+    }
+    
+    h1 {
+        font-size: 18pt;
+    }
+    
+    h5 {
+        font-size: 11pt;
+    }
+    
+    h6 {
+        font-size: 10pt;
+    }
+    
+    small, .small {
+        font-size: 8pt;
+    }
+    
+    /* Compact table styling */
+    .table {
+        font-size: 8.5pt;
+    }
+    
+    .table td, .table th {
+        padding: 0.3rem !important;
+        line-height: 1.2;
+    }
+    
+    /* Remove page breaks inside the example comparison */
+    .row.align-items-center {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    /* Ensure code blocks wrap properly */
+    code {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    
+    /* Optimize database structure columns for print */
+    .col-md-4 {
+        width: 33.33%;
+        float: left;
+    }
+    
+    /* Better handling of long field lists */
+    .ps-3 {
+        font-size: 8pt;
+        line-height: 1.1;
+    }
+}
+
+/* Button styling (hidden in print) */
+.print-button {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 1000;
+}
+
+@media print {
+    .print-button {
+        display: none !important;
+    }
+}
+</style>
+
+<!-- Save as PDF Button -->
+<button class="btn btn-primary print-button no-print" onclick="window.print()">
+    <i class="fas fa-file-pdf me-2"></i>Save as PDF
+</button>
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-broom me-2"></i>Data Cleaning & PHI Anonymization
+        </h1>
+        <p class="lead text-muted">Automated data cleaning pipeline with HIPAA-compliant PHI anonymization via one-way hashing</p>
+    </div>
+</div>
+
+<!-- Overview Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Overview
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6 class="text-primary"><i class="fas fa-sync me-2"></i>Monthly Data Processing Workflow</h6>
+                <p>This system operates on a <strong>monthly data refresh cycle</strong> with the following automated workflow:</p>
+                
+                <ol class="mb-3">
+                    <li><strong>Connect to UniteUs sFTP Server:</strong> Establish secure connection to the UniteUs sFTP server using credentials stored in the <code>.env</code> configuration file.</li>
+                    <li><strong>Download Data Files:</strong> Download pipe-delimited text files (<code>.txt</code>) for 8 tables: people, cases, referrals, employees, assistance_requests, assistance_requests_supplemental_responses, resource_lists, and resource_list_shares.</li>
+                    <li><strong>Process Data:</strong> Apply the 7-step cleaning pipeline (detailed below) to each file, including PHI anonymization via SHA-256 one-way hashing.</li>
+                    <li><strong>Store in Database:</strong> Load cleaned data into SQL database with upsert logic to prevent duplicates.</li>
+                    <li><strong>Delete Source Files:</strong> Remove downloaded text files from local storage after successful processing to minimize PHI exposure.</li>
+                </ol>
+                
+                <p>The most critical step is <strong>PHI anonymization via one-way hashing</strong>, which ensures HIPAA compliance while maintaining data utility for analysis and reporting.</p>
+                
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-lightbulb me-2"></i><strong>Key Principle:</strong> All cleaning operations are <strong>logged in detail</strong> to ETL logs with counts, percentages, and affected columns. No data is silently modified. PHI fields (43 total across 8 tables) are irreversibly hashed to protect patient privacy while preserving referential integrity across tables.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Cleaning Pipeline -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>7-Step Data Cleaning Pipeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Source files are pipe-delimited text files (<code>*.txt</code>) with UTF-8/Latin-1/CP1252 encoding (auto-detected). The pipeline transforms these into a cleaned SQL database with standardized formatting and PHI anonymization.</p>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 8%;">Step</th>
+                                <th style="width: 25%;">Operation</th>
+                                <th style="width: 67%;">Description & Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-center"><strong>1</strong></td>
+                                <td><strong>Remove Empty Rows</strong></td>
+                                <td>Removes rows where all columns are NULL. <strong>Impact:</strong> Eliminates junk rows that provide no data. Logged as <code>empty_rows</code> in data quality issues table.</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center"><strong>2</strong></td>
+                                <td><strong>Analyze NULL Values</strong></td>
+                                <td>Calculates and logs null counts and percentages for each column. <strong>Impact:</strong> Nulls are preserved but documented for quality monitoring. No data removal.</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center"><strong>3</strong></td>
+                                <td><strong>Trim Whitespace</strong></td>
+                                <td>Removes leading and trailing whitespace from all text columns. <strong>Impact:</strong> Standardizes formatting, enables accurate string matching and joins.</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center"><strong>4</strong></td>
+                                <td><strong>Fix Encoding Issues</strong></td>
+                                <td>Replaces smart quotes (<code>â€™ â€œ â€</code>) with ASCII (<code>' " "</code>). Converts string <code>'nan'</code> to NULL. <strong>Impact:</strong> Fixes UTF-8 encoding artifacts, standardizes null representation.</td>
+                            </tr>
+                            <tr class="table-warning">
+                                <td class="text-center"><strong>5</strong></td>
+                                <td><strong>🔒 Hash PHI Fields</strong></td>
+                                <td><strong>Critical:</strong> Applies SHA-256 one-way hashing with 64-char salt to all <strong>43 PHI fields</strong> across 8 tables for HIPAA compliance. <strong>Impact:</strong> Original identifiable values (names, emails, addresses, IDs) become irreversible 64-character hexadecimal hashes. Maintains referential integrity for joins. <em>See detailed section below.</em></td>
+                            </tr>
+                            <tr>
+                                <td class="text-center"><strong>6</strong></td>
+                                <td><strong>Detect Data Types</strong></td>
+                                <td>Reports detected data types for each column. <strong>Impact:</strong> All data stored as TEXT in SQL database. Type conversions (dates, numbers) happen at query time using <code>CAST()</code>.</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center"><strong>7</strong></td>
+                                <td><strong>Log Final Counts</strong></td>
+                                <td>Logs final row count and net change after all cleaning steps. <strong>Impact:</strong> Creates audit trail showing how many rows were processed, removed, or modified.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-success mt-3 mb-0">
+                    <i class="fas fa-check-circle me-2"></i><strong>Result:</strong> Original data structure and all non-PHI variables are preserved unchanged. Column names remain identical. Only formatting is cleaned and PHI fields are hashed. Two audit columns added: <code>etl_loaded_at</code>, <code>etl_updated_at</code>.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PHI Anonymization Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-shield me-2"></i>PHI Anonymization via One-Way Hashing
+                </h5>
+            </div>
+            <div class="card-body">
+                <h5 class="text-danger mb-3"><i class="fas fa-lock me-2"></i>What is One-Way Hashing?</h5>
+                <p>One-way hashing is a cryptographic technique that transforms sensitive data into a fixed-length string (hash) that <strong>cannot be reversed</strong> to recover the original value. This system uses <strong>SHA-256 with a 64-character salt</strong> to anonymize Protected Health Information (PHI) while maintaining data utility.</p>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="text-primary"><i class="fas fa-shield-alt me-2"></i>Security Properties</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Irreversible:</strong> Original values cannot be recovered from hashes</li>
+                                    <li><strong>Deterministic:</strong> Same input always produces same hash (enables joins)</li>
+                                    <li><strong>Collision-resistant:</strong> Virtually impossible for different inputs to produce same hash</li>
+                                    <li><strong>Salt-enhanced:</strong> 64-character salt prevents rainbow table attacks</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="text-success"><i class="fas fa-check-circle me-2"></i>HIPAA Compliance</h6>
+                                <ul class="mb-0">
+                                    <li><strong>Safe Harbor Method:</strong> Satisfies 45 CFR §164.514(b)(2) de-identification requirements</li>
+                                    <li><strong>Algorithm:</strong> SHA-256 (FIPS 140-2 approved cryptographic standard)</li>
+                                    <li><strong>Output:</strong> 64-character hexadecimal string (256 bits)</li>
+                                    <li><strong>Breach Protection:</strong> Data breach exposes only hashes, not actual PHI</li>
+                                </ul>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                <div class="alert alert-warning mt-3">
+                    <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Critical Security Requirements</h6>
+                    <p class="mb-2"><strong>Hash Salt Management:</strong></p>
+                    <ul class="mb-0">
+                        <li><strong>Storage:</strong> Salt stored in <code>.env</code> file in project root as <code>PHI_HASH_SALT</code> variable</li>
+                        <li><strong>Security:</strong> 64-character hexadecimal string must be kept secret and backed up securely</li>
+                        <li><strong>Consistency:</strong> Same salt must be used across all imports; changing salt invalidates existing hashes</li>
+                        <li><strong>Persistence:</strong> Hashing is <strong>irreversible</strong>—original values cannot be recovered once hashed</li>
+                    </ul>
+                </div>
+
+                <h5 class="text-danger mb-3"><i class="fas fa-exchange-alt me-2"></i>Example: Before & After Hashing</h5>
+                <div class="row align-items-center">
+                    <div class="col-md-5">
+                        <div class="card border-secondary">
+                            <div class="card-header bg-secondary text-white">
+                                <strong>Before Hashing (Original Data)</strong>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm mb-0" style="font-size: 0.75rem;">
+                                    <tr style="height: 2.5rem;">
+                                        <td style="width: 35%;"><strong>person_id:</strong></td>
+                                        <td><code>a1b2c3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>first_name:</strong></td>
+                                        <td><code>Waqqas</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>last_name:</strong></td>
+                                        <td><code>Hanafi</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>email:</strong></td>
+                                        <td><code>WHanafi@calaverascounty.gov</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>phone:</strong></td>
+                                        <td><code>(209) 555-0142</code></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-1 text-center" style="font-size: 1.5rem;">
+                        <div style="display: flex; flex-direction: column; justify-content: space-around; height: 100%; padding-top: 3rem;">
+                            <div style="line-height: 2.5rem;">→</div>
+                            <div style="line-height: 2.5rem;">→</div>
+                            <div style="line-height: 2.5rem;">→</div>
+                            <div style="line-height: 2.5rem;">→</div>
+                            <div style="line-height: 2.5rem;">→</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <strong>After Hashing (Stored in Database)</strong>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm mb-0" style="font-size: 0.75rem;">
+                                    <tr style="height: 2.5rem;">
+                                        <td style="width: 30%;"><strong>person_id:</strong></td>
+                                        <td><code class="text-break">1aedbc3d1ce4e9e3994cd8dc0693a2eae5105ab657bfc82bbd81e37c4cb10a76</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>first_name:</strong></td>
+                                        <td><code class="text-break">bcd7d308a80241f4b2e9a7448521d2353b8f6d7727df41480eccfb67f4359ead</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>last_name:</strong></td>
+                                        <td><code class="text-break">d9d1449c8ca1487d9b16275bd0bcf2821c91f73a2ed21bd26f56c22d1e87d68d</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>email:</strong></td>
+                                        <td><code class="text-break">01a1b453f5ed5146ebe8a34eed659f2687ce79064476fb2aae50442b20c067bb</code></td>
+                                    </tr>
+                                    <tr style="height: 2.5rem;">
+                                        <td><strong>phone:</strong></td>
+                                        <td><code class="text-break">76e0b572aafe12e36ca85e00312ef53cad9fef36333f08a0f2efce1db732f32c</code></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted mt-2 mb-0"><small><i class="fas fa-info-circle me-1"></i>Each hash is exactly 64 hexadecimal characters (256 bits). Same input always produces same hash, enabling table joins via person_id, case_id, etc.</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Structure -->
+<div class="row">
+    <div class="col-12">
+        <div class="card border-secondary">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-database me-2"></i>Database Structure (8 Tables)
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Complete schema showing all tables and fields in the cleaned database. PHI fields (marked with 🔒) are hashed.</p>
+
+                <div class="row">
+                    <!-- Column 1 -->
+                    <div class="col-md-4">
+                        <!-- People Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-users me-2"></i>people <small class="text-muted">(46 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                🔒 person_id <strong>(PK)</strong><br>
+                                people_created_by_id<br>
+                                people_created_at<br>
+                                people_updated_at<br>
+                                🔒 first_name<br>
+                                🔒 middle_name<br>
+                                🔒 last_name<br>
+                                title<br>
+                                suffix<br>
+                                🔒 preferred_name<br>
+                                person_consent_status<br>
+                                date_of_birth<br>
+                                gender<br>
+                                sexuality<br>
+                                sexuality_other<br>
+                                race<br>
+                                ethnicity<br>
+                                citizenship<br>
+                                marital_status<br>
+                                military_affiliation<br>
+                                gross_monthly_income<br>
+                                household_size<br>
+                                adults_in_household<br>
+                                children_in_household<br>
+                                languages<br>
+                                insurance_created_at<br>
+                                insurance_updated_at<br>
+                                🔒 medicaid_id<br>
+                                medicaid_state<br>
+                                🔒 medicare_id<br>
+                                preferred_communication_method<br>
+                                preferred_communication_time_of_day<br>
+                                🔒 person_email_address<br>
+                                🔒 person_phone_number<br>
+                                current_person_address_created_at<br>
+                                current_person_address_updated_at<br>
+                                🔒 current_person_address_line1<br>
+                                🔒 current_person_address_line2<br>
+                                current_person_address_city<br>
+                                current_person_address_county<br>
+                                current_person_address_state<br>
+                                current_person_address_postal_code<br>
+                                current_person_address_type<br>
+                                current_person_address_is_mailing_address<br>
+                                🔒 person_external_id<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+
+                        <!-- Cases Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-folder-open me-2"></i>cases <small class="text-muted">(26 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                🔒 case_id <strong>(PK)</strong><br>
+                                🔒 person_id <strong>(FK)</strong><br>
+                                cases_created_by_id<br>
+                                case_created_at<br>
+                                case_updated_at<br>
+                                ar_submitted_on<br>
+                                case_processed_at<br>
+                                case_managed_at<br>
+                                case_off_platform_at<br>
+                                case_closed_at<br>
+                                case_status<br>
+                                service_type<br>
+                                service_subtype<br>
+                                case_description<br>
+                                is_sensitive<br>
+                                network_id<br>
+                                network_name<br>
+                                provider_id<br>
+                                provider_name<br>
+                                originating_provider_id<br>
+                                originating_provider_name<br>
+                                program_id<br>
+                                program_name<br>
+                                primary_worker_id<br>
+                                primary_worker_name<br>
+                                outcome_id<br>
+                                outcome_description<br>
+                                outcome_resolution_type<br>
+                                application_source<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+
+                        <!-- Employees Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-user-tie me-2"></i>employees <small class="text-muted">(16 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                🔒 employee_id <strong>(PK)</strong><br>
+                                user_id<br>
+                                user_created_at<br>
+                                user_updated_at<br>
+                                🔒 first_name<br>
+                                🔒 last_name<br>
+                                work_title<br>
+                                🔒 email_address<br>
+                                employee_created_at<br>
+                                employee_updated_at<br>
+                                employee_status<br>
+                                network_id<br>
+                                network_name<br>
+                                provider_id<br>
+                                provider_name<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2 -->
+                    <div class="col-md-4">
+                        <!-- Referrals Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-exchange-alt me-2"></i>referrals <small class="text-muted">(34 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                🔒 referral_id <strong>(PK)</strong><br>
+                                🔒 person_id <strong>(FK)</strong><br>
+                                🔒 case_id <strong>(FK)</strong><br>
+                                🔒 referral_created_by_id<br>
+                                referral_created_at<br>
+                                referral_updated_at<br>
+                                referral_sent_at<br>
+                                referral_status<br>
+                                held_in_review_at<br>
+                                held_in_review_reason<br>
+                                recalled_at<br>
+                                recalled_reason<br>
+                                declined_at<br>
+                                declined_reason<br>
+                                sending_network_id<br>
+                                sending_network_name<br>
+                                sending_provider_id<br>
+                                sending_provider_name<br>
+                                receiving_network_id<br>
+                                receiving_network_name<br>
+                                receiving_provider_id<br>
+                                receiving_provider_name<br>
+                                receiving_program_id<br>
+                                receiving_program_name<br>
+                                referring_provider_id<br>
+                                referring_provider_name<br>
+                                referring_employee_id<br>
+                                receiving_employee_id<br>
+                                service_type<br>
+                                service_subtype<br>
+                                referral_reason<br>
+                                referral_notes<br>
+                                followup_date<br>
+                                application_source<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+
+                        <!-- Assistance Requests Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-hands-helping me-2"></i>assistance_requests <small class="text-muted">(72 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                🔒 assistance_request_id <strong>(PK)</strong><br>
+                                🔒 person_id <strong>(FK)</strong><br>
+                                🔒 case_id <strong>(FK)</strong><br>
+                                description<br>
+                                service_id<br>
+                                provider_id<br>
+                                🔒 person_first_name<br>
+                                🔒 person_last_name<br>
+                                🔒 person_date_of_birth<br>
+                                🔒 person_middle_name<br>
+                                🔒 person_preferred_name<br>
+                                person_gender<br>
+                                person_sexuality<br>
+                                person_sexuality_other<br>
+                                person_citizenship<br>
+                                person_ethnicity<br>
+                                person_marital_status<br>
+                                person_race<br>
+                                person_title<br>
+                                person_suffix<br>
+                                person_gross_monthly_income<br>
+                                🔒 person_email_address<br>
+                                🔒 person_phone_number<br>
+                                mil_affiliation<br>
+                                mil_current_status<br>
+                                mil_currently_transitioning<br>
+                                mil_one_day_active_duty<br>
+                                mil_branch<br>
+                                mil_service_era<br>
+                                mil_entry_date<br>
+                                mil_exit_date<br>
+                                mil_deployed<br>
+                                mil_deployment_starts_at<br>
+                                mil_deployment_ends_at<br>
+                                mil_discharge_type<br>
+                                mil_discharged_due_to_disability<br>
+                                mil_service_connected_disability<br>
+                                mil_service_connected_disability_rating<br>
+                                mil_proof_of_veteran_status<br>
+                                mil_proof_type<br>
+                                address_type<br>
+                                🔒 address_line_1<br>
+                                🔒 address_line_2<br>
+                                address_city<br>
+                                address_state<br>
+                                address_country<br>
+                                address_postal_code<br>
+                                address_county<br>
+                                created_at<br>
+                                updated_at<br>
+                                status<br>
+                                request_type<br>
+                                request_description<br>
+                                urgency_level<br>
+                                demographics_age<br>
+                                demographics_gender_identity<br>
+                                demographics_race<br>
+                                demographics_ethnicity<br>
+                                demographics_primary_language<br>
+                                demographics_household_size<br>
+                                demographics_income_range<br>
+                                housing_current_status<br>
+                                housing_type<br>
+                                employment_status<br>
+                                education_level<br>
+                                health_insurance_status<br>
+                                transportation_access<br>
+                                legal_status<br>
+                                mil_veteran_status<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 3 -->
+                    <div class="col-md-4">
+                        <!-- Assistance Requests Supplemental Responses Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-clipboard-list me-2"></i>assistance_requests_supplemental_responses <small class="text-muted">(11 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                🔒 ar_supplemental_response_id <strong>(PK)</strong><br>
+                                🔒 assistance_request_id <strong>(FK)</strong><br>
+                                provider_id<br>
+                                form_id<br>
+                                form_name<br>
+                                submission_id<br>
+                                question_id<br>
+                                question_at_time_of_response<br>
+                                form_responses<br>
+                                created_at<br>
+                                updated_at<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+
+                        <!-- Resource Lists Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-list me-2"></i>resource_lists <small class="text-muted">(15 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                id <strong>(PK)</strong><br>
+                                🔒 resource_list_id<br>
+                                resource_list_created_at<br>
+                                resource_list_updated_at<br>
+                                created_via_type<br>
+                                created_via_id<br>
+                                application_source<br>
+                                provider_id<br>
+                                provider_name<br>
+                                program_id<br>
+                                program_name<br>
+                                service_type_name<br>
+                                parent_service_type_name<br>
+                                created_by_employee_id<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+
+                        <!-- Resource List Shares Table -->
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="fas fa-share-alt me-2"></i>resource_list_shares <small class="text-muted">(21 fields + 2 audit)</small></h6>
+                            <div class="ps-3" style="font-size: 0.85rem; line-height: 1.4;">
+                                🔒 id <strong>(PK)</strong><br>
+                                share_event_origin<br>
+                                application_source<br>
+                                🔒 resource_list_id <strong>(FK)</strong><br>
+                                shared_by_employee_id<br>
+                                shared_to_employee_id<br>
+                                🔒 person_id <strong>(FK)</strong><br>
+                                shared_to_person_id<br>
+                                share_event_id<br>
+                                share_event_created_at<br>
+                                shared_at<br>
+                                shared_method_value<br>
+                                shared_method_type<br>
+                                shared_via_type<br>
+                                shared_via_id<br>
+                                shared_language<br>
+                                sharing_method<br>
+                                sharing_notes<br>
+                                provider_id<br>
+                                provider_name<br>
+                                program_id<br>
+                                program_name<br>
+                                pull_timestamp<br>
+                                <em>etl_loaded_at</em><br>
+                                <em>etl_updated_at</em>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="fas fa-info-circle me-2"></i><strong>Legend:</strong> 🔒 = PHI field (hashed) | <strong>(PK)</strong> = Primary Key | <strong>(FK)</strong> = Foreign Key | <em>Italic</em> = Audit field (added by ETL)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,1168 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Schema Management
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for managing database schema errors and 
+    file-to-table mappings.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'schema' %}
+{% set page_title = 'Schema Management' %}
+{% set page_icon = 'table' %}
+{% set page_description = 'Manage schema errors and file-to-table mappings' %}
+
+{% block admin_content %}
+<div class="row">
+    <div class="col-md-12">
+        <!-- Schema Errors Card - NOW AT TOP -->
+        <div class="card mb-4" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-table me-2" style="color: #2c5282;"></i>Schema Errors
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary" id="refreshSchemaErrorsBtn">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="card-body" style="padding: 24px;">
+                <div class="alert alert-info" style="font-size: 13px; padding: 12px;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Schema Validation:</strong> This section shows schema mismatches detected during file imports. 
+                    Use the suggested SQL commands to fix missing tables or columns.
+                </div>
+                
+                <div id="schemaErrorsContainer">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="text-muted mt-2">Loading schema errors...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Database Schema Card -->
+        <div class="card mb-4" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-database me-2" style="color: #2c5282;"></i>Database Schema
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary me-2" id="copySchemaBtn">
+                            <i class="fas fa-copy me-1"></i>Copy Schema
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" id="refreshSchemaBtn">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" style="padding: 24px;">
+                <div class="alert alert-info" style="font-size: 13px; padding: 12px;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Schema Definition:</strong> This is the complete database schema for the current database type.
+                    All schema definitions are centralized following DRY principles.
+                    <span id="schemaDbType" class="badge bg-primary ms-2"></span>
+                </div>
+                
+                <div class="mb-3">
+                    <ul class="nav nav-tabs" id="schemaTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="adapted-schema-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#adapted-schema" type="button" role="tab">
+                                Current Schema
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="sqlite-schema-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#sqlite-schema" type="button" role="tab">
+                                SQLite Base Schema
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="table-descriptions-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#table-descriptions" type="button" role="tab">
+                                Table Descriptions
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="schemaTabsContent" style="border: 1px solid #dee2e6; border-top: none; padding: 20px; background: #f8f9fa;">
+                        <div class="tab-pane fade" id="adapted-schema" role="tabpanel">
+                            <pre id="adaptedSchemaContent" style="background: #2d3748; color: #e2e8f0; padding: 20px; border-radius: 6px; max-height: 600px; overflow-y: auto; font-size: 12px; line-height: 1.5;"><code>Loading schema...</code></pre>
+                        </div>
+                        <div class="tab-pane fade" id="sqlite-schema" role="tabpanel">
+                            <pre id="sqliteSchemaContent" style="background: #2d3748; color: #e2e8f0; padding: 20px; border-radius: 6px; max-height: 600px; overflow-y: auto; font-size: 12px; line-height: 1.5;"><code>Loading schema...</code></pre>
+                        </div>
+                        <div class="tab-pane fade show active" id="table-descriptions" role="tabpanel">
+                            <div id="tableDescriptionsContent" style="max-height: 600px; overflow-y: auto;">
+                                <p class="text-muted">Loading descriptions...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- File-to-Table Mappings Card -->
+        <div class="card mb-4" style="border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-link me-2" style="color: #2c5282;"></i>File-to-Table Mappings
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="showPatternTester()">
+                            <i class="fas fa-vial me-2"></i>Test Pattern
+                        </button>
+                        <button class="btn btn-sm btn-primary" onclick="showAddMappingModal()">
+                            <i class="fas fa-plus me-2"></i>Add Mapping
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" style="padding: 24px;">
+                <!-- Pattern Conflicts Warning -->
+                <div id="conflictsWarning" class="alert alert-warning d-none" style="font-size: 13px; padding: 12px;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Pattern Conflicts Detected:</strong>
+                    <div id="conflictsList" class="mt-2"></div>
+                </div>
+                
+                <!-- Pattern Tester (Initially Hidden) -->
+                <div id="patternTester" class="card mb-3 d-none" style="border: 2px solid #3182ce; background: #ebf8ff;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0" style="color: #2c5282;">
+                                <i class="fas fa-vial me-2"></i>Pattern Testing Tool
+                            </h6>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="closePatternTester()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Test Filename:</strong></label>
+                            <input type="text" class="form-control" id="testFilename" 
+                                   placeholder="e.g., chhsca_people_20250101.txt or SAMPLE_chhsca_cases_20250228.txt">
+                            <small class="text-muted">Enter a filename to see which patterns match it</small>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="testFilenamePattern()">
+                            <i class="fas fa-play me-2"></i>Test Pattern
+                        </button>
+                        <div id="testResults" class="mt-3"></div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info" style="font-size: 13px; padding: 12px;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>File Mappings:</strong> Configure how filenames map to database table names. 
+                    Supports wildcards (e.g., <code>chhsca_*.txt</code>). If no mapping is found, 
+                    the system will use pattern-based extraction. 
+                    <strong>Use the Pattern Tester to verify your mappings.</strong>
+                </div>
+                
+                <div id="fileMappingsContainer" style="overflow-y: visible; max-height: none;">
+                    <div class="text-center py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                        <p class="text-muted mt-2">Loading mappings...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadDatabaseSchema();
+    loadSchemaErrors();
+    loadFileMappings();
+    
+    // Refresh buttons
+    const refreshSchemaBtn = document.getElementById('refreshSchemaBtn');
+    if (refreshSchemaBtn) {
+        refreshSchemaBtn.addEventListener('click', loadDatabaseSchema);
+    }
+    
+    const refreshSchemaErrorsBtn = document.getElementById('refreshSchemaErrorsBtn');
+    if (refreshSchemaErrorsBtn) {
+        refreshSchemaErrorsBtn.addEventListener('click', loadSchemaErrors);
+    }
+    
+    // Copy schema button
+    const copySchemaBtn = document.getElementById('copySchemaBtn');
+    if (copySchemaBtn) {
+        copySchemaBtn.addEventListener('click', copyCurrentSchema);
+    }
+});
+
+let currentSchemaData = null;
+
+async function loadDatabaseSchema() {
+    try {
+        const response = await fetch('/api/database/schema-sql');
+        const data = await response.json();
+        
+        if (data.success) {
+            currentSchemaData = data;
+            
+            // Update database type badge
+            const dbTypeBadge = document.getElementById('schemaDbType');
+            if (dbTypeBadge) {
+                dbTypeBadge.textContent = data.database_type.toUpperCase();
+            }
+            
+            // Update adapted schema
+            const adaptedContent = document.getElementById('adaptedSchemaContent');
+            if (adaptedContent) {
+                adaptedContent.innerHTML = `<code>${escapeHtml(data.adapted_schema)}</code>`;
+            }
+            
+            // Update SQLite schema
+            const sqliteContent = document.getElementById('sqliteSchemaContent');
+            if (sqliteContent) {
+                sqliteContent.innerHTML = `<code>${escapeHtml(data.sqlite_schema)}</code>`;
+            }
+            
+            // Update table descriptions
+            const descriptionsContent = document.getElementById('tableDescriptionsContent');
+            if (descriptionsContent && data.table_descriptions) {
+                let html = '<div class="table-responsive"><table class="table table-sm table-hover">';
+                html += '<thead><tr><th style="width: 30%;">Table Name</th><th>Description</th></tr></thead><tbody>';
+                
+                for (const [tableName, description] of Object.entries(data.table_descriptions)) {
+                    html += `<tr><td><code style="font-size: 13px;">${tableName}</code></td><td>${description}</td></tr>`;
+                }
+                
+                html += '</tbody></table></div>';
+                
+                // Add view definitions
+                if (data.view_definitions && Object.keys(data.view_definitions).length > 0) {
+                    html += '<h6 class="mt-4 mb-3" style="font-weight: 600;">Analytical Views</h6>';
+                    html += '<div class="table-responsive"><table class="table table-sm table-hover">';
+                    html += '<thead><tr><th style="width: 30%;">View Name</th><th>Description</th></tr></thead><tbody>';
+                    
+                    for (const [viewName, description] of Object.entries(data.view_definitions)) {
+                        html += `<tr><td><code style="font-size: 13px;">${viewName}</code></td><td>${description}</td></tr>`;
+                    }
+                    
+                    html += '</tbody></table></div>';
+                }
+                
+                descriptionsContent.innerHTML = html;
+            }
+        } else {
+            console.error('Failed to load schema:', data.error);
+            document.getElementById('adaptedSchemaContent').innerHTML = '<code class="text-danger">Error loading schema: ' + data.error + '</code>';
+        }
+    } catch (error) {
+        console.error('Error loading database schema:', error);
+        document.getElementById('adaptedSchemaContent').innerHTML = '<code class="text-danger">Error loading schema: ' + error.message + '</code>';
+    }
+}
+
+function copyCurrentSchema() {
+    if (!currentSchemaData) {
+        alert('Schema not loaded yet. Please wait.');
+        return;
+    }
+    
+    // Get the active tab's schema
+    const activeTab = document.querySelector('#schemaTabs .nav-link.active');
+    let schemaToCopy = currentSchemaData.adapted_schema;
+    
+    if (activeTab && activeTab.id === 'sqlite-schema-tab') {
+        schemaToCopy = currentSchemaData.sqlite_schema;
+    }
+    
+    navigator.clipboard.writeText(schemaToCopy).then(() => {
+        const btn = document.getElementById('copySchemaBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(err => {
+        alert('Failed to copy schema: ' + err.message);
+    });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+};
+
+async function loadSchemaErrors() {
+    const container = document.getElementById('schemaErrorsContainer');
+    try {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                <p class="text-muted mt-2">Loading schema errors...</p>
+            </div>
+        `;
+        
+        const response = await fetch('/api/schema/errors?limit=1000&resolved=false');
+        const data = await response.json();
+        
+        if (data.success) {
+            const errors = data.errors || [];
+            
+            if (errors.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                        <h5 class="text-muted">No Schema Errors</h5>
+                        <p class="text-muted">All file imports are matching the expected database schema.</p>
+                    </div>
+                `;
+            } else {
+                let html = '<div class="table-responsive"><table class="table table-hover">';
+                html += '<thead><tr>';
+                html += '<th>Detected</th><th>File</th><th>Table</th><th>Error Type</th><th>Message</th><th>Action</th>';
+                html += '</tr></thead><tbody>';
+                
+                errors.forEach(error => {
+                    const detectedDate = new Date(error.detected_at).toLocaleString();
+                    const severityClass = error.severity === 'critical' ? 'danger' : 'warning';
+                    
+                    html += `<tr class="table-${severityClass === 'critical' ? 'danger' : 'warning'}" style="opacity: 0.9;">`;
+                    html += `<td style="font-size: 12px;">${detectedDate}</td>`;
+                    html += `<td><code style="font-size: 12px;">${error.file_name}</code></td>`;
+                    html += `<td><strong>${error.table_name || 'N/A'}</strong></td>`;
+                    html += `<td><span class="badge bg-${severityClass}">${error.error_type}</span></td>`;
+                    html += `<td style="max-width: 300px;">${error.error_message}</td>`;
+                    html += `<td>`;
+                    html += `<button class="btn btn-sm btn-primary me-2" onclick="showSchemaFix(${error.id}, '${error.error_type}', '${error.table_name || ''}')">`;
+                    html += `<i class="fas fa-wrench me-1"></i>Fix</button>`;
+                    html += `<button class="btn btn-sm btn-outline-secondary" onclick="resolveSchemaError(${error.id})">`;
+                    html += `<i class="fas fa-check me-1"></i>Resolve</button>`;
+                    html += `</td>`;
+                    html += `</tr>`;
+                });
+                
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            }
+        } else {
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading schema errors: ${data.error || 'Unknown error'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading schema errors: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function showSchemaFix(errorId, errorType, tableName) {
+    // Fetch error details to get suggested SQL
+    fetch(`/api/schema/errors?limit=1000&resolved=false`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const error = data.errors.find(e => e.id === errorId);
+                if (error && error.suggested_sql) {
+                    showSQLModal(error.suggested_sql, errorType, tableName, errorId);
+                } else {
+                    alert('No suggested SQL command available for this error.');
+                }
+            }
+        })
+        .catch(err => {
+            alert('Error fetching error details: ' + err.message);
+        });
+}
+
+function showSQLModal(sqlCommand, errorType, tableName, errorId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-code me-2"></i>SQL Command to Fix Schema Issue
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> Review this SQL command carefully before executing. 
+                        This will modify your database schema.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Error Type:</strong> ${errorType}</label><br>
+                        <label class="form-label"><strong>Table:</strong> ${tableName || 'N/A'}</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>SQL Command:</strong></label>
+                        <textarea class="form-control font-monospace" id="sqlCommandText" rows="10" style="font-size: 12px;">${sqlCommand}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="executeSchemaSQL(${errorId})">
+                        <i class="fas fa-play me-2"></i>Execute Command
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+async function executeSchemaSQL(errorId) {
+    const sqlCommand = document.getElementById('sqlCommandText').value;
+    
+    if (!confirm('Are you sure you want to execute this SQL command? This will modify your database schema.')) {
+        return;
+    }
+    
+    try {
+        const formData = new FormData();
+        formData.append('sql_command', sqlCommand);
+        
+        const response = await fetch('/api/schema/execute-sql', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('SQL command executed successfully!');
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+            if (modal) modal.hide();
+            // Reload errors
+            loadSchemaErrors();
+            // Refresh nav pill to update error count
+            if (typeof window.refreshNavPill === 'function') {
+                window.refreshNavPill('schema');
+            }
+        } else {
+            alert('Error executing SQL: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error executing SQL: ' + error.message);
+    }
+}
+
+async function resolveSchemaError(errorId) {
+    if (!confirm('Mark this error as resolved?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/schema/errors/${errorId}/resolve`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadSchemaErrors();
+            // Refresh nav pill to update error count
+            if (typeof window.refreshNavPill === 'function') {
+                window.refreshNavPill('schema');
+            }
+        } else {
+            alert('Error resolving error: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error resolving error: ' + error.message);
+    }
+}
+
+// File mappings functionality
+let allMappingsData = null; // Store all mappings for conflict detection
+
+async function loadFileMappings() {
+    const container = document.getElementById('fileMappingsContainer');
+    try {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                <p class="text-muted mt-2">Loading mappings...</p>
+            </div>
+        `;
+        
+        const response = await fetch('/api/schema/file-mappings?include_defaults=true');
+        const data = await response.json();
+        
+        if (data.success) {
+            const customMappings = data.mappings || [];
+            const defaultMappings = data.default_mappings || [];
+            const config = data.config || {};
+            
+            // Store for conflict detection
+            allMappingsData = {
+                custom: customMappings,
+                defaults: defaultMappings
+            };
+            
+            // Detect conflicts
+            const conflicts = detectMappingConflicts(customMappings, defaultMappings);
+            displayConflicts(conflicts);
+            
+            if (customMappings.length === 0 && defaultMappings.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-link fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Mappings Configured</h5>
+                        <p class="text-muted">Add mappings to customize how filenames map to table names.</p>
+                    </div>
+                `;
+            } else {
+                let html = '';
+                
+                // Show configuration info
+                if (config.ignored_prefixes || config.recognized_extensions) {
+                    html += '<div class="alert alert-light mb-3" style="font-size: 13px; border-left: 3px solid #4299e1;">';
+                    html += '<i class="fas fa-cog me-2" style="color: #4299e1;"></i><strong>Pattern Extraction Settings:</strong><br>';
+                    if (config.ignored_prefixes && config.ignored_prefixes.length > 0) {
+                        html += `<div class="mt-2"><strong>Ignored prefixes:</strong> <code>${config.ignored_prefixes.join(', ')}</code></div>`;
+                    }
+                    if (config.recognized_extensions && config.recognized_extensions.length > 0) {
+                        html += `<div class="mt-1"><strong>Recognized extensions:</strong> <code>${config.recognized_extensions.join(', ')}</code></div>`;
+                    }
+                    html += '<div class="mt-2"><small class="text-muted">If no custom mapping matches, the system uses pattern-based extraction with these settings.</small></div>';
+                    html += '</div>';
+                }
+                
+                html += '<div class="table-responsive" style="overflow-y: visible; max-height: none;"><table class="table table-hover">';
+                html += '<thead><tr>';
+                html += '<th style="width: 40%;">File Pattern</th><th style="width: 25%;">Table Name</th><th style="width: 15%;">Type</th><th style="width: 20%;">Actions</th>';
+                html += '</tr></thead><tbody>';
+                
+                // Show custom mappings first
+                customMappings.forEach(mapping => {
+                    html += `<tr>`;
+                    html += `<td><code style="font-size: 13px; background: #e6fffa; padding: 4px 8px; border-radius: 4px;">${escapeHtml(mapping.file_pattern)}</code></td>`;
+                    html += `<td><strong style="color: #2c5282;">${escapeHtml(mapping.table_name)}</strong></td>`;
+                    html += `<td><span class="badge bg-primary"><i class="fas fa-user me-1"></i>Custom</span></td>`;
+                    html += `<td>`;
+                    html += `<button class="btn btn-sm btn-outline-primary me-1" onclick="editMapping(${mapping.id}, '${escapeForJs(mapping.file_pattern)}', '${escapeForJs(mapping.table_name)}')">`;
+                    html += `<i class="fas fa-edit me-1"></i>Edit</button>`;
+                    html += `<button class="btn btn-sm btn-outline-danger" onclick="deleteMapping(${mapping.id})">`;
+                    html += `<i class="fas fa-trash me-1"></i>Delete</button>`;
+                    html += `</td>`;
+                    html += `</tr>`;
+                });
+                
+                // Show default mappings
+                if (defaultMappings.length > 0) {
+                    // Group by table for better organization
+                    const byTable = {};
+                    defaultMappings.forEach(pattern => {
+                        if (!byTable[pattern.table_name]) {
+                            byTable[pattern.table_name] = [];
+                        }
+                        byTable[pattern.table_name].push(pattern);
+                    });
+                    
+                    // Sort table names
+                    const tableNames = Object.keys(byTable).sort();
+                    
+                    tableNames.forEach(tableName => {
+                        const patterns = byTable[tableName];
+                        patterns.forEach((pattern, idx) => {
+                            html += `<tr style="background-color: #f7fafc;">`;
+                            if (idx === 0) {
+                                html += `<td rowspan="${patterns.length}"><code style="font-size: 13px; background: #e2e8f0; padding: 4px 8px; border-radius: 4px;">${escapeHtml(pattern.file_pattern)}</code></td>`;
+                                html += `<td rowspan="${patterns.length}"><strong style="color: #4a5568;">${escapeHtml(tableName)}</strong></td>`;
+                                html += `<td rowspan="${patterns.length}"><span class="badge bg-secondary"><i class="fas fa-robot me-1"></i>Default</span></td>`;
+                                html += `<td rowspan="${patterns.length}">`;
+                                html += `<button class="btn btn-sm btn-outline-primary" onclick="createMappingFromDefault('${escapeForJs(pattern.file_pattern)}', '${escapeForJs(pattern.table_name)}')">`;
+                                html += `<i class="fas fa-edit me-1"></i>Override</button>`;
+                                html += `</td>`;
+                            } else {
+                                html += `<td colspan="4"><code style="font-size: 13px; background: #e2e8f0; padding: 4px 8px; border-radius: 4px;">${escapeHtml(pattern.file_pattern)}</code></td>`;
+                            }
+                            html += `</tr>`;
+                        });
+                    });
+                }
+                
+                html += '</tbody></table></div>';
+                
+                // Add summary info
+                html += '<div class="alert alert-light mt-3" style="font-size: 13px;">';
+                html += `<i class="fas fa-chart-bar me-2"></i>`;
+                html += `<strong>Summary:</strong> ${customMappings.length} custom mapping(s), ${defaultMappings.length} default pattern(s). `;
+                if (conflicts.length > 0) {
+                    html += `<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>${conflicts.length} conflict(s) detected - see warning above.</span>`;
+                }
+                html += '</div>';
+                
+                container.innerHTML = html;
+            }
+        } else {
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error loading mappings: ${data.error || 'Unknown error'}
+                </div>
+            `;
+        }
+    } catch (error) {
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading mappings: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function escapeForJs(text) {
+    return text.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+function detectMappingConflicts(customMappings, defaultMappings) {
+    const conflicts = [];
+    const allMappings = [...customMappings, ...defaultMappings];
+    
+    // Check each mapping against all others
+    for (let i = 0; i < allMappings.length; i++) {
+        for (let j = i + 1; j < allMappings.length; j++) {
+            const m1 = allMappings[i];
+            const m2 = allMappings[j];
+            
+            // Skip if mapping to same table (allowed)
+            if (m1.table_name === m2.table_name) continue;
+            
+            // Check if patterns could match the same file
+            const testFiles = generateTestFilenames(m1.file_pattern);
+            for (const testFile of testFiles) {
+                if (matchesPattern(m2.file_pattern, testFile)) {
+                    conflicts.push({
+                        pattern1: m1.file_pattern,
+                        table1: m1.table_name,
+                        pattern2: m2.file_pattern,
+                        table2: m2.table_name,
+                        exampleFile: testFile,
+                        isCustom1: customMappings.includes(m1),
+                        isCustom2: customMappings.includes(m2)
+                    });
+                    break;
+                }
+            }
+        }
+    }
+    
+    return conflicts;
+}
+
+function generateTestFilenames(pattern) {
+    // Generate example filenames that would match this pattern
+    const filenames = [];
+    
+    // Replace * wildcards with realistic examples
+    let base = pattern;
+    
+    // Common replacements for wildcards
+    const replacements = ['20250101', 'people', 'data', '20250228', '20241115'];
+    
+    replacements.forEach(replacement => {
+        const testName = base.replace('*', replacement);
+        if (!testName.includes('*')) {
+            filenames.push(testName);
+        }
+    });
+    
+    // Also add the exact pattern if no wildcards
+    if (!pattern.includes('*')) {
+        filenames.push(pattern);
+    }
+    
+    return filenames.slice(0, 5); // Limit to 5 test cases
+}
+
+function matchesPattern(pattern, filename) {
+    // Convert glob pattern to regex
+    const regexPattern = pattern
+        .replace(/\./g, '\\.')  // Escape dots
+        .replace(/\*/g, '.*');   // Replace * with .*
+    
+    const regex = new RegExp(`^${regexPattern}$`, 'i');
+    return regex.test(filename);
+}
+
+function displayConflicts(conflicts) {
+    const warningDiv = document.getElementById('conflictsWarning');
+    const listDiv = document.getElementById('conflictsList');
+    
+    if (conflicts.length === 0) {
+        warningDiv.classList.add('d-none');
+        return;
+    }
+    
+    warningDiv.classList.remove('d-none');
+    
+    let html = '<ul class="mb-0" style="font-size: 12px;">';
+    conflicts.forEach(conflict => {
+        const type1 = conflict.isCustom1 ? 'Custom' : 'Default';
+        const type2 = conflict.isCustom2 ? 'Custom' : 'Default';
+        html += `<li>`;
+        html += `<strong>Conflict:</strong> `;
+        html += `<code>${conflict.pattern1}</code> (${type1} → <strong>${conflict.table1}</strong>) `;
+        html += `and <code>${conflict.pattern2}</code> (${type2} → <strong>${conflict.table2}</strong>) `;
+        html += `both match <code>${conflict.exampleFile}</code>`;
+        html += `</li>`;
+    });
+    html += '</ul>';
+    
+    listDiv.innerHTML = html;
+}
+
+function showPatternTester() {
+    const tester = document.getElementById('patternTester');
+    tester.classList.remove('d-none');
+    document.getElementById('testFilename').focus();
+}
+
+function closePatternTester() {
+    const tester = document.getElementById('patternTester');
+    tester.classList.add('d-none');
+    document.getElementById('testResults').innerHTML = '';
+}
+
+async function testFilenamePattern() {
+    const filename = document.getElementById('testFilename').value.trim();
+    const resultsDiv = document.getElementById('testResults');
+    
+    if (!filename) {
+        resultsDiv.innerHTML = '<div class="alert alert-warning">Please enter a filename to test.</div>';
+        return;
+    }
+    
+    resultsDiv.innerHTML = '<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Testing...</div>';
+    
+    if (!allMappingsData) {
+        resultsDiv.innerHTML = '<div class="alert alert-danger">No mappings data loaded. Please refresh the page.</div>';
+        return;
+    }
+    
+    const allMappings = [...allMappingsData.custom, ...allMappingsData.defaults];
+    const matches = [];
+    
+    // Test against all patterns
+    allMappings.forEach(mapping => {
+        if (matchesPattern(mapping.file_pattern, filename)) {
+            matches.push({
+                pattern: mapping.file_pattern,
+                table: mapping.table_name,
+                isCustom: allMappingsData.custom.includes(mapping)
+            });
+        }
+    });
+    
+    // Display results
+    let html = '';
+    
+    if (matches.length === 0) {
+        html = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>No matches found.</strong> The filename <code>${escapeHtml(filename)}</code> 
+                does not match any configured patterns. The system will use pattern-based extraction.
+            </div>
+        `;
+    } else if (matches.length === 1) {
+        const match = matches[0];
+        const type = match.isCustom ? 'Custom' : 'Default';
+        html = `
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Match found!</strong> The filename <code>${escapeHtml(filename)}</code> matches:
+                <div class="mt-2">
+                    <strong>Pattern:</strong> <code>${escapeHtml(match.pattern)}</code><br>
+                    <strong>Maps to table:</strong> <strong style="color: #2c5282;">${escapeHtml(match.table)}</strong><br>
+                    <strong>Type:</strong> <span class="badge bg-${match.isCustom ? 'primary' : 'secondary'}">${type}</span>
+                </div>
+            </div>
+        `;
+    } else {
+        // Multiple matches - conflict!
+        html = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Multiple matches found!</strong> The filename <code>${escapeHtml(filename)}</code> 
+                matches ${matches.length} patterns, mapping to different tables:
+                <ul class="mt-2 mb-0">
+        `;
+        matches.forEach(match => {
+            const type = match.isCustom ? 'Custom' : 'Default';
+            html += `
+                <li>
+                    <code>${escapeHtml(match.pattern)}</code> (${type}) → 
+                    <strong style="color: #c53030;">${escapeHtml(match.table)}</strong>
+                </li>
+            `;
+        });
+        html += `
+                </ul>
+                <div class="mt-2">
+                    <strong>⚠️ This is a conflict!</strong> The system cannot determine which table to use. 
+                    Please adjust your patterns to be more specific.
+                </div>
+            </div>
+        `;
+    }
+    
+    resultsDiv.innerHTML = html;
+}
+
+function showAddMappingModal() {
+    // Remove any existing modals first
+    const existingModals = document.querySelectorAll('.modal');
+    existingModals.forEach(m => {
+        const bsModal = bootstrap.Modal.getInstance(m);
+        if (bsModal) {
+            bsModal.hide();
+        }
+        m.remove();
+    });
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'addMappingModal';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>Add File-to-Table Mapping
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>File Pattern:</strong></label>
+                        <input type="text" class="form-control" id="mappingFilePattern" 
+                               placeholder="e.g., chhsca_people_*.txt or exact filename">
+                        <small class="text-muted">Use * for wildcards (e.g., chhsca_*.txt)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Table Name:</strong></label>
+                        <input type="text" class="form-control" id="mappingTableName" 
+                               placeholder="e.g., people">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveMapping()">
+                        <i class="fas fa-save me-2"></i>Save Mapping
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        if (document.body.contains(modal)) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+function createMappingFromDefault(filePattern, tableName) {
+    // Remove any existing modals first
+    const existingModals = document.querySelectorAll('.modal');
+    existingModals.forEach(m => {
+        const bsModal = bootstrap.Modal.getInstance(m);
+        if (bsModal) {
+            bsModal.hide();
+        }
+        m.remove();
+    });
+    
+    // Pre-fill the add modal with default values to create a custom mapping
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'addMappingModal';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Edit Default Mapping
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Creating a custom mapping will override the default pattern-based extraction for this pattern.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>File Pattern:</strong></label>
+                        <input type="text" class="form-control" id="mappingFilePattern" 
+                               value="${filePattern.replace(/"/g, '&quot;').replace(/'/g, "\\'")}" placeholder="e.g., chhsca_people_*.txt">
+                        <small class="text-muted">Use * for wildcards (e.g., chhsca_*.txt)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Table Name:</strong></label>
+                        <input type="text" class="form-control" id="mappingTableName" 
+                               value="${tableName.replace(/"/g, '&quot;').replace(/'/g, "\\'")}" placeholder="e.g., people">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveMapping()">
+                        <i class="fas fa-save me-2"></i>Save Mapping
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        if (document.body.contains(modal)) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+function editMapping(mappingId, filePattern, tableName) {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Edit File-to-Table Mapping
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>File Pattern:</strong></label>
+                        <input type="text" class="form-control" id="editMappingFilePattern" 
+                               value="${filePattern.replace(/"/g, '&quot;')}" placeholder="e.g., chhsca_people_*.txt">
+                        <small class="text-muted">Use * for wildcards (e.g., chhsca_*.txt)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Table Name:</strong></label>
+                        <input type="text" class="form-control" id="editMappingTableName" 
+                               value="${tableName.replace(/"/g, '&quot;')}" placeholder="e.g., people">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateMapping(${mappingId})">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const bsModal = new bootstrap.Modal(modal);
+    bsModal.show();
+    
+    modal.addEventListener('hidden.bs.modal', () => {
+        document.body.removeChild(modal);
+    });
+}
+
+async function updateMapping(mappingId) {
+    const filePatternInput = document.getElementById('editMappingFilePattern');
+    const tableNameInput = document.getElementById('editMappingTableName');
+    
+    if (!filePatternInput || !tableNameInput) {
+        alert('Error: Could not find form fields. Please try again.');
+        return;
+    }
+    
+    const filePattern = filePatternInput.value.trim();
+    const tableName = tableNameInput.value.trim();
+    
+    if (!filePattern || !tableName) {
+        alert('Please fill in both file pattern and table name.');
+        return;
+    }
+    
+    // Basic validation: check for invalid characters
+    if (filePattern.includes('/') || filePattern.includes('\\')) {
+        alert('File pattern cannot contain path separators (/, \\)');
+        return;
+    }
+    
+    // Disable save button to prevent double submission
+    const saveButton = filePatternInput.closest('.modal').querySelector('button.btn-primary');
+    const originalText = saveButton.innerHTML;
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('file_pattern', filePattern);
+        formData.append('table_name', tableName);
+        formData.append('mapping_id', mappingId);
+        
+        const response = await fetch('/api/schema/file-mappings', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.querySelector('.modal'));
+            if (modal) modal.hide();
+            // Reload mappings
+            loadFileMappings();
+        } else {
+            // Show error in a more user-friendly way
+            const errorMsg = data.error || 'Unknown error';
+            alert('Error updating mapping:\n\n' + errorMsg);
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalText;
+        }
+    } catch (error) {
+        alert('Error updating mapping: ' + error.message);
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalText;
+    }
+}
+
+async function saveMapping() {
+    const filePatternInput = document.getElementById('mappingFilePattern');
+    const tableNameInput = document.getElementById('mappingTableName');
+    
+    if (!filePatternInput || !tableNameInput) {
+        alert('Error: Could not find form fields. Please try again.');
+        return;
+    }
+    
+    const filePattern = filePatternInput.value.trim();
+    const tableName = tableNameInput.value.trim();
+    
+    if (!filePattern || !tableName) {
+        alert('Please fill in both file pattern and table name.');
+        return;
+    }
+    
+    // Basic validation: check for invalid characters
+    if (filePattern.includes('/') || filePattern.includes('\\')) {
+        alert('File pattern cannot contain path separators (/, \\)');
+        return;
+    }
+    
+    // Disable save button to prevent double submission
+    const saveButton = filePatternInput.closest('.modal').querySelector('button.btn-primary');
+    const originalText = saveButton.innerHTML;
+    saveButton.disabled = true;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('file_pattern', filePattern);
+        formData.append('table_name', tableName);
+        
+        const response = await fetch('/api/schema/file-mappings', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Close modal
+            const modalElement = document.getElementById('addMappingModal') || document.querySelector('.modal');
+            if (modalElement) {
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+                // Clean up after a short delay to ensure modal is hidden
+                setTimeout(() => {
+                    if (document.body.contains(modalElement)) {
+                        document.body.removeChild(modalElement);
+                    }
+                }, 300);
+            }
+            // Reload mappings
+            loadFileMappings();
+        } else {
+            // Show error in a more user-friendly way
+            const errorMsg = data.error || 'Unknown error';
+            alert('Error saving mapping:\n\n' + errorMsg);
+            saveButton.disabled = false;
+            saveButton.innerHTML = originalText;
+        }
+    } catch (error) {
+        alert('Error saving mapping: ' + error.message);
+        saveButton.disabled = false;
+        saveButton.innerHTML = originalText;
+    }
+}
+
+async function deleteMapping(mappingId) {
+    if (!confirm('Are you sure you want to delete this mapping?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/schema/file-mappings/${mappingId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            loadFileMappings();
+        } else {
+            alert('Error deleting mapping: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('Error deleting mapping: ' + error.message);
+    }
+}
+</script>
+{% endblock %}
+

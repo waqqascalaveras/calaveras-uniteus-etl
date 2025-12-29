@@ -1,0 +1,680 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - ETL Logs Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    ETL logs viewer for monitoring ETL job execution, viewing processing
+    history, and analyzing job performance and errors.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="fas fa-list-alt me-2"></i>ETL Logs & History
+        </h1>
+    </div>
+</div>
+
+<!-- Log Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-filter me-1"></i>Filter Options
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="logType" class="form-label">Log Type</label>
+                        <select class="form-select" id="logType">
+                            <option value="">All Types</option>
+                            <option value="etl_jobs">ETL Jobs</option>
+                            <option value="file_processing">File Processing</option>
+                            <option value="data_quality">Data Quality</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Status</label>
+                        <select class="form-select" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="completed">Completed</option>
+                            <option value="running">Running</option>
+                            <option value="failed">Failed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="dateFrom" class="form-label">Date From</label>
+                        <input type="date" class="form-control" id="dateFrom">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="dateTo" class="form-label">Date To</label>
+                        <input type="date" class="form-control" id="dateTo">
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button id="applyFiltersBtn" class="btn btn-primary me-2">
+                            <i class="fas fa-filter me-1"></i>Apply Filters
+                        </button>
+                        <button id="clearFiltersBtn" class="btn btn-outline-secondary me-2">
+                            <i class="fas fa-times me-1"></i>Clear Filters
+                        </button>
+                        <button id="refreshLogsBtn" class="btn btn-outline-primary">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Current Job Status -->
+<div class="row mb-4" id="currentJobSection" style="display: none;">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-cogs me-1"></i>Current ETL Job
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="currentJobContent">
+                    <!-- Current job details will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ETL Job History -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-1"></i>ETL Job History
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="jobHistoryLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                
+                <div id="jobHistoryContent" class="d-none">
+                    <div class="table-responsive">
+                        <table id="jobHistoryTable" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Job ID</th>
+                                    <th>Status</th>
+                                    <th>Files Processed</th>
+                                    <th>Records</th>
+                                    <th>Started</th>
+                                    <th>Duration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="jobHistoryEmpty" class="text-center text-muted py-3 d-none">
+                    <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                    <p class="mb-0">No ETL job history found</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Processing History -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-file-alt me-1"></i>File Processing History
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="fileHistoryLoading" class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                
+                <div id="fileHistoryContent" class="d-none">
+                    <div class="table-responsive">
+                        <table id="fileHistoryTable" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>File Name</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Records</th>
+                                    <th>Processing Time</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination for file history -->
+                    <nav class="mt-3">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <label for="fileHistoryPageSize" class="form-label me-2 mb-0">Show:</label>
+                                    <select id="fileHistoryPageSize" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="25">25</option>
+                                        <option value="50" selected>50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <span class="ms-2 text-muted">entries</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="d-flex justify-content-end">
+                                    <button id="loadMoreBtn" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-plus me-1"></i>Load More
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+                
+                <div id="fileHistoryEmpty" class="text-center text-muted py-3 d-none">
+                    <i class="fas fa-inbox fa-3x mb-3 opacity-50"></i>
+                    <p class="mb-0">No file processing history found</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Detail Modal -->
+<div class="modal fade" id="logDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="logDetailTitle">Log Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="logDetailContent">
+                    <!-- Log details will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let autoRefreshInterval;
+let currentFileHistoryLimit = 50;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllLogs();
+    startAutoRefresh();
+    
+    // Event listeners
+    document.getElementById('applyFiltersBtn').addEventListener('click', loadAllLogs);
+    document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+    document.getElementById('refreshLogsBtn').addEventListener('click', loadAllLogs);
+    document.getElementById('loadMoreBtn').addEventListener('click', loadMoreFileHistory);
+    document.getElementById('fileHistoryPageSize').addEventListener('change', changeFileHistoryPageSize);
+});
+
+async function loadAllLogs() {
+    await Promise.all([
+        loadCurrentJobStatus(),
+        loadJobHistory(),
+        loadFileHistory()
+    ]);
+}
+
+async function loadCurrentJobStatus() {
+    try {
+        const response = await fetch('/api/etl/status');
+        const data = await response.json();
+        
+        const section = document.getElementById('currentJobSection');
+        const content = document.getElementById('currentJobContent');
+        
+        if (data.current_job && data.current_job.is_running) {
+            const job = data.current_job;
+            
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6 class="mb-2">Job ID: ${job.job_id}</h6>
+                        <div class="mb-2">
+                            <span class="badge bg-${getStatusColor(job.status)}">${job.status}</span>
+                            <span class="ms-2 text-muted">Started: ${new Date(job.start_time).toLocaleString()}</span>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                 style="width: ${job.total_files > 0 ? (job.files_processed / job.total_files) * 100 : 0}%">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            Progress: ${job.files_processed} / ${job.total_files} files processed
+                        </small>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button class="btn btn-danger btn-sm" onclick="cancelCurrentJob()">
+                            <i class="fas fa-stop me-1"></i>Cancel Job
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            section.style.display = 'block';
+        } else {
+            section.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Error loading current job status:', error);
+    }
+}
+
+async function loadJobHistory() {
+    const loadingDiv = document.getElementById('jobHistoryLoading');
+    const contentDiv = document.getElementById('jobHistoryContent');
+    const emptyDiv = document.getElementById('jobHistoryEmpty');
+    
+    try {
+        loadingDiv.classList.remove('d-none');
+        contentDiv.classList.add('d-none');
+        emptyDiv.classList.add('d-none');
+        
+        const response = await fetch('/api/etl/history?limit=50');
+        const data = await response.json();
+        
+        loadingDiv.classList.add('d-none');
+        
+        if (data.history && data.history.length > 0) {
+            const tbody = document.querySelector('#jobHistoryTable tbody');
+            tbody.innerHTML = '';
+            
+            data.history.forEach(job => {
+                const duration = job.end_time ? 
+                    formatDuration(new Date(job.end_time) - new Date(job.start_time)) : 'Running';
+                
+                const isRunning = job.status === 'running' || job.status === 'in_progress';
+                
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td><code>${job.job_id.substring(0, 12)}...</code></td>
+                    <td><span class="badge bg-${getStatusColor(job.status)}">${job.status}</span></td>
+                    <td>${job.files_processed} / ${job.total_files}</td>
+                    <td>${(job.total_records || 0).toLocaleString()}</td>
+                    <td>${new Date(job.start_time).toLocaleString()}</td>
+                    <td>${duration}</td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm" onclick="showJobDetails('${job.job_id}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+            });
+            
+            contentDiv.classList.remove('d-none');
+        } else {
+            emptyDiv.classList.remove('d-none');
+        }
+        
+    } catch (error) {
+        console.error('Error loading job history:', error);
+        loadingDiv.classList.add('d-none');
+        emptyDiv.classList.remove('d-none');
+    }
+}
+
+async function loadFileHistory() {
+    const loadingDiv = document.getElementById('fileHistoryLoading');
+    const contentDiv = document.getElementById('fileHistoryContent');
+    const emptyDiv = document.getElementById('fileHistoryEmpty');
+    
+    try {
+        loadingDiv.classList.remove('d-none');
+        contentDiv.classList.add('d-none');
+        emptyDiv.classList.add('d-none');
+        
+        const response = await fetch(`/api/etl/processing-history?limit=${currentFileHistoryLimit}`);
+        const data = await response.json();
+        
+        loadingDiv.classList.add('d-none');
+        
+        if (data.success && data.data && data.data.length > 0) {
+            const tbody = document.querySelector('#fileHistoryTable tbody');
+            tbody.innerHTML = '';
+            
+            data.data.forEach(record => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td>
+                        <div class="text-truncate" style="max-width: 200px;" title="${record.file_name || 'N/A'}">
+                            ${record.file_name || 'N/A'}
+                        </div>
+                    </td>
+                    <td><span class="badge bg-secondary">${record.file_type || 'Unknown'}</span></td>
+                    <td><span class="badge bg-${getStatusColor(record.status)}">${record.status || 'Unknown'}</span></td>
+                    <td>${(record.records_processed || 0).toLocaleString()}</td>
+                    <td>${record.processing_time_seconds ? record.processing_time_seconds + 's' : 'N/A'}</td>
+                    <td>${record.processed_at ? new Date(record.processed_at).toLocaleString() : 'N/A'}</td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm" onclick="showFileDetails('${record.file_name}')">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </td>
+                `;
+            });
+            
+            // Show/hide load more button
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            loadMoreBtn.style.display = data.data.length >= currentFileHistoryLimit ? 'block' : 'none';
+            
+            contentDiv.classList.remove('d-none');
+        } else {
+            emptyDiv.classList.remove('d-none');
+        }
+        
+    } catch (error) {
+        console.error('Error loading file history:', error);
+        loadingDiv.classList.add('d-none');
+        emptyDiv.classList.remove('d-none');
+    }
+}
+
+async function loadMoreFileHistory() {
+    currentFileHistoryLimit += 50;
+    await loadFileHistory();
+}
+
+function changeFileHistoryPageSize() {
+    currentFileHistoryLimit = parseInt(document.getElementById('fileHistoryPageSize').value);
+    loadFileHistory();
+}
+
+async function cancelCurrentJob() {
+    if (!confirm('Are you sure you want to cancel the current ETL job?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/etl/cancel', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showSuccess('ETL job cancelled successfully');
+            await loadCurrentJobStatus();
+        } else {
+            const error = await response.json();
+            showError(error.detail || 'Failed to cancel ETL job');
+        }
+        
+    } catch (error) {
+        console.error('Error cancelling ETL job:', error);
+        showError('Failed to cancel ETL job');
+    }
+}
+
+async function showJobDetails(jobId) {
+    const modal = new bootstrap.Modal(document.getElementById('logDetailModal'));
+    document.getElementById('logDetailTitle').textContent = `ETL Job Details - ${jobId}`;
+    
+    try {
+        // Fetch job details from API
+        const response = await fetch(`/api/etl/job/${jobId}`);
+        console.log('[showJobDetails] Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error('Job not found');
+        }
+        
+        const jobDetails = await response.json();
+        console.log('[showJobDetails] API response:', jobDetails);
+        
+        // Extract job from response (API returns {job: {...}})
+        const job = jobDetails.job || jobDetails;
+        console.log('[showJobDetails] Job data:', job);
+        console.log('[showJobDetails] job_id:', job.job_id);
+        console.log('[showJobDetails] status:', job.status);
+        console.log('[showJobDetails] files:', job.files);
+        
+        // Calculate duration
+        let duration = 'N/A';
+        if (job.start_time && job.end_time) {
+            const start = new Date(job.start_time);
+            const end = new Date(job.end_time);
+            const seconds = Math.round((end - start) / 1000);
+            duration = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+        }
+        
+        // Render job details with file list
+        let filesHtml = '';
+        if (job.files && job.files.length > 0) {
+            filesHtml = `
+                <h6 class="mt-3">Processed Files</h6>
+                <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>File Name</th>
+                                <th>Status</th>
+                                <th>Records</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${job.files.map(file => `
+                                <tr>
+                                    <td class="small">${file.file_name || file.filename || 'Unknown'}</td>
+                                    <td><span class="badge bg-${file.status === 'completed' || file.status === 'success' ? 'success' : file.status === 'failed' ? 'danger' : 'secondary'}">${file.status}</span></td>
+                                    <td>${file.records_loaded || 0}</td>
+                                    <td>${file.processing_time_seconds ? file.processing_time_seconds + 's' : 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        document.getElementById('logDetailContent').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Job Information</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>Job ID:</strong></td><td><code class="small">${job.job_id}</code></td></tr>
+                        <tr><td><strong>Status:</strong></td><td><span class="badge bg-${job.status === 'completed' ? 'success' : job.status === 'failed' ? 'danger' : job.status === 'running' ? 'primary' : 'secondary'}">${job.status}</span></td></tr>
+                        <tr><td><strong>Files Processed:</strong></td><td>${job.files_processed || 0} / ${job.total_files || 0}</td></tr>
+                        <tr><td><strong>Completed:</strong></td><td>${job.completed_files || 0}</td></tr>
+                        <tr><td><strong>Failed:</strong></td><td>${job.failed_files || 0}</td></tr>
+                        <tr><td><strong>Records Loaded:</strong></td><td>${(job.total_records_loaded || 0).toLocaleString()}</td></tr>
+                        <tr><td><strong>Started:</strong></td><td>${job.start_time ? new Date(job.start_time).toLocaleString() : 'N/A'}</td></tr>
+                        <tr><td><strong>Duration:</strong></td><td>${duration}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    ${job.error_messages && job.error_messages.length > 0 ? `
+                    <h6>Errors</h6>
+                    <div class="alert alert-danger">
+                        <ul class="mb-0 small">
+                            ${job.error_messages.map(err => `<li>${err}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : '<h6>Status</h6><p class="text-success"><i class="fas fa-check-circle"></i> No errors reported</p>'}
+                </div>
+            </div>
+            ${filesHtml}
+        `;
+    } catch (error) {
+        console.error('Error fetching job details:', error);
+        document.getElementById('logDetailContent').innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Unable to load job details for Job ID: ${jobId}
+                <br><small class="text-muted">The job may have been cleared from history or does not exist.</small>
+            </div>
+        `;
+    }
+    
+    modal.show();
+}
+
+function showFileDetails(fileName) {
+    const modal = new bootstrap.Modal(document.getElementById('logDetailModal'));
+    document.getElementById('logDetailTitle').textContent = `File Processing Details - ${fileName}`;
+    
+    // Find file in loaded data
+    const fileHistoryTable = document.getElementById('fileHistoryTable');
+    const rows = fileHistoryTable.querySelectorAll('tbody tr');
+    
+    let fileDetails = null;
+    rows.forEach(row => {
+        if (row.cells[0].textContent.trim() === fileName) {
+            fileDetails = {
+                file_name: row.cells[0].textContent.trim(),
+                type: row.cells[1].textContent,
+                status: row.cells[2].textContent,
+                records: row.cells[3].textContent,
+                processing_time: row.cells[4].textContent,
+                date: row.cells[5].textContent
+            };
+        }
+    });
+    
+    if (fileDetails) {
+        const statusColor = getStatusColor(fileDetails.status);
+        
+        document.getElementById('logDetailContent').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>File Information</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>File Name:</strong></td><td>${fileDetails.file_name}</td></tr>
+                        <tr><td><strong>File Type:</strong></td><td>${fileDetails.type}</td></tr>
+                        <tr><td><strong>Status:</strong></td><td><span class="badge bg-${statusColor}">${fileDetails.status}</span></td></tr>
+                        <tr><td><strong>Records Processed:</strong></td><td>${fileDetails.records}</td></tr>
+                        <tr><td><strong>Processing Time:</strong></td><td>${fileDetails.processing_time}</td></tr>
+                        <tr><td><strong>Processed Date:</strong></td><td>${fileDetails.date}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Processing Status</h6>
+                    ${fileDetails.status.toLowerCase() === 'completed' || fileDetails.status.toLowerCase() === 'success' ? 
+                        '<p class="text-success"><i class="fas fa-check-circle"></i> File processed successfully</p>' : 
+                        fileDetails.status.toLowerCase() === 'failed' ? 
+                        '<div class="alert alert-danger small"><i class="fas fa-exclamation-triangle"></i> Processing failed. Check ETL logs for details.</div>' :
+                        '<p class="text-muted">Processing status: ' + fileDetails.status + '</p>'
+                    }
+                    <small class="text-muted">
+                        This file contains ${fileDetails.records} records that were loaded into the database. 
+                        Processing completed in ${fileDetails.processing_time}.
+                    </small>
+                </div>
+            </div>
+        `;
+    } else {
+        document.getElementById('logDetailContent').innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> File details not found for: ${fileName}
+            </div>
+        `;
+    }
+    
+    modal.show();
+}
+
+function clearFilters() {
+    document.getElementById('logType').value = '';
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    
+    loadAllLogs();
+}
+
+function getStatusColor(status) {
+    switch (status?.toLowerCase()) {
+        case 'completed':
+        case 'success':
+            return 'success';
+        case 'running':
+        case 'in_progress':
+            return 'primary';
+        case 'failed':
+        case 'error':
+            return 'danger';
+        case 'cancelled':
+            return 'warning';
+        default:
+            return 'secondary';
+    }
+}
+
+function formatDuration(milliseconds) {
+    const seconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    } else if (minutes > 0) {
+        return `${minutes}m ${seconds % 60}s`;
+    } else {
+        return `${seconds}s`;
+    }
+}
+
+function startAutoRefresh() {
+    // Clear any existing interval to prevent duplicates
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+    // Refresh every 30 seconds (reduced from 15s to minimize server load)
+    autoRefreshInterval = setInterval(async () => {
+        await loadCurrentJobStatus();
+    }, 30000);
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+}
+
+// Stop auto-refresh when page is hidden
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        stopAutoRefresh();
+    } else {
+        startAutoRefresh();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,638 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Annual Report Builder Page
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Annual report builder interface for generating comprehensive reports
+    with charts, visualizations, and data exports in Word and PDF formats.
+================================================================================
+-->
+{% extends "base.html" %}
+
+{% block title %}Annual Report Builder - UniteUs ETL{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="mb-1"><i class="fas fa-file-alt me-2"></i>Annual Report Builder</h2>
+            <p class="text-muted mb-0">Configure date range, select charts, and export your annual report</p>
+        </div>
+    </div>
+
+    <!-- Configuration Bar -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-bold">Quick Date Selection</label>
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-primary" onclick="setDateRange('today')">Today</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setDateRange('this_week')">This Week</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setDateRange('this_month')">This Month</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setDateRange('this_quarter')">This Quarter</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setDateRange('this_year')">This Year</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setDateRange('last_year')">Last Year</button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setDateRange('all_time')">All Time</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Start Date</label>
+                    <input type="date" class="form-control" id="startDate" value="2024-01-01">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">End Date</label>
+                    <input type="date" class="form-control" id="endDate" value="2024-12-31">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">&nbsp;</label>
+                    <button class="btn btn-primary w-100" onclick="loadReportData()">
+                        <i class="fas fa-sync-alt me-1"></i>Load Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Content -->
+    <div id="reportContent">
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-chart-bar fa-4x mb-3 opacity-25"></i>
+            <p class="mb-0">Click "Load Data" to generate your report</p>
+        </div>
+    </div>
+</div>
+
+<div style="display: none;" id="hiddenCharts">
+    <canvas id="annualReferralStatusChart"></canvas>
+    <canvas id="annualCaseStatusChart"></canvas>
+    <canvas id="annualServiceTypesChart"></canvas>
+    <canvas id="annualTimelineChart"></canvas>
+    <canvas id="annualAgeChart"></canvas>
+    <canvas id="annualGenderChart"></canvas>
+    <canvas id="annualRaceChart"></canvas>
+    <div id="reportPeriodDisplay"></div>
+    <div id="reportGeneratedDate"></div>
+    <table id="annualProgramPerformanceTable"><tbody></tbody></table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let charts = {};
+let startDate = '2024-01-01';
+let endDate = '2024-12-31';
+
+function setDateRange(range) {
+    const today = new Date();
+    let start, end;
+    
+    switch(range) {
+        case 'today':
+            start = end = today;
+            break;
+        case 'this_week':
+            start = new Date(today.setDate(today.getDate() - today.getDay()));
+            end = new Date();
+            break;
+        case 'this_month':
+            start = new Date(today.getFullYear(), today.getMonth(), 1);
+            end = new Date();
+            break;
+        case 'this_quarter':
+            const quarter = Math.floor(today.getMonth() / 3);
+            start = new Date(today.getFullYear(), quarter * 3, 1);
+            end = new Date();
+            break;
+        case 'this_year':
+            start = new Date(today.getFullYear(), 0, 1);
+            end = new Date();
+            break;
+        case 'last_year':
+            start = new Date(today.getFullYear() - 1, 0, 1);
+            end = new Date(today.getFullYear() - 1, 11, 31);
+            break;
+        case 'all_time':
+            start = new Date(2020, 0, 1);
+            end = new Date();
+            break;
+    }
+    
+    document.getElementById('startDate').value = start.toISOString().split('T')[0];
+    document.getElementById('endDate').value = end.toISOString().split('T')[0];
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadReportData();
+});
+
+function selectAllCharts() {
+    document.querySelectorAll('.chart-checkbox').forEach(cb => cb.checked = true);
+    updateSelectedCount();
+}
+
+function deselectAllCharts() {
+    document.querySelectorAll('.chart-checkbox').forEach(cb => cb.checked = false);
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const total = document.querySelectorAll('.chart-checkbox').length;
+    const selected = document.querySelectorAll('.chart-checkbox:checked').length;
+    document.getElementById('selectedChartsCount').textContent = selected;
+}
+
+async function loadReportData() {
+    const container = document.getElementById('reportContent');
+    
+    container.innerHTML = '<div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-3 text-muted">Loading data...</p></div>';
+    
+    try {
+        startDate = document.getElementById('startDate').value;
+        endDate = document.getElementById('endDate').value;
+        
+        // Load summary data
+        const response = await fetch(`/api/reports/summary?start_date=${startDate}&end_date=${endDate}`);
+        const summaryData = await response.json();
+        
+        // Build the complete report view
+        await buildReportView(container, summaryData);
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = '<div class="alert alert-danger">Failed to load data</div>';
+    }
+}
+
+async function buildReportView(container, summaryData) {
+    const dateParams = `start_date=${startDate}&end_date=${endDate}`;
+    
+    const chartDefinitions = [
+        { id: 'referralStatus', title: 'Referral Status', endpoint: '/api/reports/referral-status', type: 'doughnut', category: 'Overview' },
+        { id: 'caseStatus', title: 'Case Status', endpoint: '/api/reports/case-status', type: 'pie', category: 'Overview' },
+        { id: 'serviceTypes', title: 'Service Types', endpoint: '/api/reports/service-types', type: 'bar', category: 'Overview' },
+        { id: 'timeline', title: 'Referrals Timeline', endpoint: '/api/reports/referrals-timeline?grouping=month', type: 'line', category: 'Overview' },
+        { id: 'age', title: 'Age Distribution', endpoint: '/api/reports/demographics/age-distribution', type: 'bar', category: 'Demographics' },
+        { id: 'gender', title: 'Gender Distribution', endpoint: '/api/reports/demographics/gender', type: 'doughnut', category: 'Demographics' },
+        { id: 'race', title: 'Race/Ethnicity', endpoint: '/api/reports/demographics/race-ethnicity', type: 'bar', category: 'Demographics' },
+        { id: 'income', title: 'Income Distribution', endpoint: '/api/reports/demographics/income-distribution', type: 'bar', category: 'Demographics' },
+        { id: 'household', title: 'Household Composition', endpoint: '/api/reports/demographics/household-composition', type: 'bar', category: 'Demographics' },
+        { id: 'marital', title: 'Marital Status', endpoint: '/api/reports/demographics/marital-status', type: 'pie', category: 'Demographics' },
+        { id: 'language', title: 'Language Preferences', endpoint: '/api/reports/demographics/language-preferences', type: 'bar', category: 'Demographics' },
+        { id: 'insurance', title: 'Insurance Coverage', endpoint: '/api/reports/demographics/insurance-coverage', type: 'pie', category: 'Demographics' },
+        { id: 'communication', title: 'Communication Preferences', endpoint: '/api/reports/demographics/communication-preferences', type: 'bar', category: 'Demographics' },
+        { id: 'veteran', title: 'Veteran Services', endpoint: '/api/reports/military/veteran-services', type: 'bar', category: 'Demographics' },
+        { id: 'serviceSubtypes', title: 'Service Subtypes', endpoint: '/api/reports/service-subtypes', type: 'bar', category: 'Services & Outcomes' },
+        { id: 'caseOutcomes', title: 'Case Outcomes', endpoint: '/api/reports/case-outcomes', type: 'bar', category: 'Services & Outcomes' },
+        { id: 'resolutionTime', title: 'Resolution Time', endpoint: '/api/reports/service-metrics/resolution-time', type: 'bar', category: 'Services & Outcomes' },
+        { id: 'referralConversion', title: 'Referral Conversion', endpoint: '/api/reports/service-metrics/referral-conversion', type: 'bar', category: 'Services & Outcomes' },
+        { id: 'sendingProviders', title: 'Top Sending Providers', endpoint: '/api/reports/sending-providers', type: 'bar', category: 'Network & Providers' },
+        { id: 'receivingProviders', title: 'Top Receiving Providers', endpoint: '/api/reports/receiving-providers', type: 'bar', category: 'Network & Providers' },
+        { id: 'topPrograms', title: 'Top Programs', endpoint: '/api/reports/top-programs', type: 'bar', category: 'Network & Providers' },
+        { id: 'providerCollaboration', title: 'Provider Collaboration', endpoint: '/api/reports/network/provider-collaboration', type: 'bar', category: 'Network & Providers' },
+        { id: 'servicePathways', title: 'Service Pathways', endpoint: '/api/reports/service-pathways', type: 'bar', category: 'Network & Providers' },
+        { id: 'providerPerformance', title: 'Provider Performance', endpoint: '/api/reports/provider-performance', type: 'bar', category: 'Network & Providers' },
+        { id: 'geoDistribution', title: 'Geographic Distribution', endpoint: '/api/reports/geographic/cases-by-location', type: 'bar', category: 'Network & Providers' }
+    ];
+    
+    // Start building HTML
+    let html = `
+        <!-- Executive Summary -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Executive Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card text-center border-primary h-100">
+                            <div class="card-body py-3">
+                                <h3 class="text-primary mb-1">${summaryData.total_referrals?.toLocaleString() || '-'}</h3>
+                                <small class="text-muted">Total Referrals</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card text-center border-success h-100">
+                            <div class="card-body py-3">
+                                <h3 class="text-success mb-1">${summaryData.total_cases?.toLocaleString() || '-'}</h3>
+                                <small class="text-muted">Total Cases</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card text-center border-info h-100">
+                            <div class="card-body py-3">
+                                <h3 class="text-info mb-1">${summaryData.total_people?.toLocaleString() || '-'}</h3>
+                                <small class="text-muted">People Served</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <div class="card text-center border-warning h-100">
+                            <div class="card-body py-3">
+                                <h3 class="text-warning mb-1">${summaryData.total_assistance_requests?.toLocaleString() || '-'}</h3>
+                                <small class="text-muted">Assistance Requests</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <strong>Period:</strong> ${startDate} to ${endDate}<br>
+                    <strong>Generated:</strong> ${new Date().toLocaleString()}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chart Selection -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-check-square me-2"></i>Select Charts to Include</h5>
+                <div>
+                    <button class="btn btn-sm btn-light me-2" onclick="selectAllCharts()">
+                        <i class="fas fa-check-double me-1"></i>Select All
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="deselectAllCharts()">
+                        <i class="fas fa-times me-1"></i>Deselect All
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+    `;
+    
+    // Group by category
+    const categories = {
+        'Overview': chartDefinitions.filter(c => c.category === 'Overview'),
+        'Demographics': chartDefinitions.filter(c => c.category === 'Demographics'),
+        'Services & Outcomes': chartDefinitions.filter(c => c.category === 'Services & Outcomes'),
+        'Network & Providers': chartDefinitions.filter(c => c.category === 'Network & Providers')
+    };
+    
+    for (const [categoryName, charts] of Object.entries(categories)) {
+        html += `
+            <div class="mb-3">
+                <h6 class="text-primary mb-2"><i class="fas fa-folder-open me-2"></i>${categoryName}</h6>
+                <div class="row g-2">
+        `;
+        
+        for (const chart of charts) {
+            html += `
+                <div class="col-md-3 col-sm-6">
+                    <div class="form-check">
+                        <input class="form-check-input chart-checkbox" type="checkbox" checked 
+                               id="check_${chart.id}" data-chart-id="${chart.id}">
+                        <label class="form-check-label" for="check_${chart.id}">
+                            ${chart.title}
+                        </label>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    html += `
+            </div>
+        </div>
+        
+        <!-- Export Actions -->
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <p class="mb-3">
+                    <span class="badge bg-info fs-5 me-2">
+                        <span id="selectedChartsCount">${chartDefinitions.length}</span> of ${chartDefinitions.length} charts selected
+                    </span>
+                </p>
+                <button class="btn btn-success btn-lg me-3" onclick="exportToWord()" id="exportWordBtn">
+                    <i class="fas fa-file-word me-2"></i>Export to Word
+                </button>
+                <button class="btn btn-danger btn-lg" onclick="exportToPDF()" id="exportPdfBtn">
+                    <i class="fas fa-file-pdf me-2"></i>Export to PDF
+                </button>
+            </div>
+        </div>
+        
+        <!-- Chart Previews -->
+        <h4 class="mb-3"><i class="fas fa-eye me-2"></i>Chart Previews</h4>
+    `;
+    
+    container.innerHTML = html;
+    
+    // Add event listeners to checkboxes
+    document.querySelectorAll('.chart-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateSelectedCount);
+    });
+    
+    // Load and render charts
+    await loadAllCharts(container, chartDefinitions, dateParams);
+}
+
+async function loadAllCharts(container, chartDefinitions, dateParams) {
+    const categories = {
+        'Overview': chartDefinitions.filter(c => c.category === 'Overview'),
+        'Demographics': chartDefinitions.filter(c => c.category === 'Demographics'),
+        'Services & Outcomes': chartDefinitions.filter(c => c.category === 'Services & Outcomes'),
+        'Network & Providers': chartDefinitions.filter(c => c.category === 'Network & Providers')
+    };
+    
+    let chartsHtml = '<div class="row g-4">';
+    
+    for (const [categoryName, categoryCharts] of Object.entries(categories)) {
+        chartsHtml += `
+            <div class="col-12">
+                <h5 class="mb-3 pb-2 border-bottom">
+                    <i class="fas fa-folder-open me-2 text-primary"></i>${categoryName}
+                </h5>
+            </div>
+        `;
+        
+        for (const chart of categoryCharts) {
+            chartsHtml += `
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <strong>${chart.title}</strong>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="canvas_${chart.id}" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    chartsHtml += '</div>';
+    container.insertAdjacentHTML('beforeend', chartsHtml);
+    
+    // Render all charts
+    for (const chart of chartDefinitions) {
+        try {
+            const response = await fetch(`${chart.endpoint}${chart.endpoint.includes('?') ? '&' : '?'}${dateParams}`);
+            const data = await response.json();
+            const canvas = document.getElementById(`canvas_${chart.id}`);
+            
+            if (canvas && data.labels && data.data) {
+                charts[chart.id] = new Chart(canvas, {
+                    type: chart.type,
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: chart.title,
+                            data: data.data,
+                            backgroundColor: data.backgroundColor || generateColors(data.labels.length),
+                            borderColor: data.borderColor || generateColors(data.labels.length),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: chart.type !== 'line' },
+                            title: { display: false }
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            console.error(`Error rendering ${chart.title}:`, error);
+        }
+    }
+}
+
+function generateColors(count) {
+    const colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+        '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384',
+        '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+    ];
+    return Array.from({ length: count }, (_, i) => colors[i % colors.length]);
+}
+
+async function captureAllCharts() {
+    const chartImages = {};
+    
+    // Small delay to ensure all charts are fully rendered
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Mapping from frontend chart IDs to backend expected chart IDs
+    const chartIdMapping = {
+        'referralStatus': 'annualReferralStatusChart',
+        'caseStatus': 'annualCaseStatusChart',
+        'serviceTypes': 'annualServiceTypesChart',
+        'timeline': 'annualTimelineChart',
+        'age': 'annualAgeChart',
+        'gender': 'annualGenderChart',
+        'race': 'annualRaceChart',
+        'household': 'annualHouseholdChart',
+        'income': 'annualIncomeChart',
+        'insurance': 'annualInsuranceChart',
+        'communication': 'annualCommPrefChart',
+        'marital': 'annualMaritalChart',
+        'language': 'annualLanguageChart',
+        'veteran': 'annualMilAffChart',
+        'sendingProviders': 'annualSendingProvidersChart',
+        'receivingProviders': 'annualReceivingProvidersChart',
+        'topPrograms': 'annualTopProgramsChart',
+        'caseOutcomes': 'annualCaseOutcomesChart',
+        'serviceSubtypes': 'annualServiceSubtypesChart',
+        'resolutionTime': 'annualResolutionTimeChart',
+        'referralConversion': 'annualReferralConversionChart',
+        'providerCollaboration': 'annualProviderCollaborationChart',
+        'servicePathways': 'annualServicePathwaysChart',
+        'providerPerformance': 'annualProviderPerformanceChart',
+        'geoDistribution': 'annualGeoDistributionChart'
+    };
+    
+    // Get all selected charts
+    const selectedCheckboxes = document.querySelectorAll('.chart-checkbox:checked');
+    const selectedChartIds = Array.from(selectedCheckboxes).map(cb => cb.getAttribute('data-chart-id'));
+    
+    // Capture images for all selected charts
+    for (const chartId of selectedChartIds) {
+        try {
+            const canvas = document.getElementById(`canvas_${chartId}`);
+            if (canvas && charts[chartId]) {
+                // Get the Chart.js instance
+                const chart = charts[chartId];
+                
+                // Capture the chart as base64 image
+                const imageData = chart.toBase64Image('image/png', 1.0);
+                
+                // Map to backend expected ID
+                const backendChartId = chartIdMapping[chartId] || `annual${chartId.charAt(0).toUpperCase() + chartId.slice(1)}Chart`;
+                chartImages[backendChartId] = imageData;
+                
+                console.log(`Captured chart: ${chartId} -> ${backendChartId}`);
+            } else {
+                console.warn(`Chart not found or not rendered: ${chartId}`);
+            }
+        } catch (error) {
+            console.error(`Error capturing chart ${chartId}:`, error);
+        }
+    }
+    
+    return chartImages;
+}
+
+function extractAllTableData() {
+    const tableData = { program_performance: [] };
+    
+    // Try to extract program performance table if it exists
+    try {
+        const table = document.getElementById('annualProgramPerformanceTable');
+        if (table && table.querySelector('tbody')) {
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 4) {
+                    tableData.program_performance.push({
+                        program_name: cells[0].textContent.trim(),
+                        total_referrals: cells[1].textContent.trim(),
+                        accepted: cells[2].textContent.trim(),
+                        acceptance_rate: cells[3].textContent.trim()
+                    });
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error extracting table data:', error);
+    }
+    
+    return tableData;
+}
+
+async function exportToWord() {
+    const btn = document.getElementById('exportWordBtn');
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
+    
+    try {
+        const chartImages = await captureAllCharts();
+        const tableData = extractAllTableData();
+        
+        // Extract summary data from the summary cards
+        const summaryCards = document.querySelectorAll('.card.text-center');
+        let totalReferrals = '-';
+        let totalCases = '-';
+        let totalPeople = '-';
+        let totalAssistance = '-';
+        
+        summaryCards.forEach(card => {
+            const value = card.querySelector('h3')?.textContent?.trim();
+            const label = card.querySelector('small')?.textContent?.trim();
+            if (label) {
+                if (label.includes('Referrals')) totalReferrals = value || '-';
+                else if (label.includes('Cases')) totalCases = value || '-';
+                else if (label.includes('People')) totalPeople = value || '-';
+                else if (label.includes('Assistance')) totalAssistance = value || '-';
+            }
+        });
+        
+        const reportData = {
+            period: `${startDate} to ${endDate}`,
+            generated_date: new Date().toLocaleString(),
+            summary: {
+                total_referrals: totalReferrals,
+                total_cases: totalCases,
+                total_people: totalPeople,
+                total_assistance: totalAssistance
+            },
+            charts: chartImages,
+            tables: tableData
+        };
+        
+        const response = await fetch('/api/reports/export/annual-report-word', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reportData)
+        });
+        
+        if (!response.ok) throw new Error('Failed to generate Word document');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Annual_Report_${new Date().toISOString().split('T')[0]}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to export to Word');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    }
+}
+
+async function exportToPDF() {
+    try {
+        const chartImages = await captureAllCharts();
+        const tableData = extractAllTableData();
+        
+        // Extract summary data from the summary cards
+        const summaryCards = document.querySelectorAll('.card.text-center');
+        let totalReferrals = '-';
+        let totalCases = '-';
+        let totalPeople = '-';
+        let totalAssistance = '-';
+        
+        summaryCards.forEach(card => {
+            const value = card.querySelector('h3')?.textContent?.trim();
+            const label = card.querySelector('small')?.textContent?.trim();
+            if (label) {
+                if (label.includes('Referrals')) totalReferrals = value || '-';
+                else if (label.includes('Cases')) totalCases = value || '-';
+                else if (label.includes('People')) totalPeople = value || '-';
+                else if (label.includes('Assistance')) totalAssistance = value || '-';
+            }
+        });
+        
+        const reportData = {
+            period: `${startDate} to ${endDate}`,
+            generated_date: new Date().toLocaleString(),
+            summary: {
+                total_referrals: totalReferrals,
+                total_cases: totalCases,
+                total_people: totalPeople,
+                total_assistance: totalAssistance
+            },
+            charts: chartImages,
+            tables: tableData
+        };
+        
+        const response = await fetch('/api/reports/export/annual-report-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reportData)
+        });
+        
+        if (!response.ok) throw new Error('Failed to generate PDF');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Annual_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to export to PDF');
+    }
+}
+</script>
+{% endblock %}

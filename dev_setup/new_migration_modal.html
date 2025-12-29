@@ -1,0 +1,284 @@
+<!-- NEW MIGRATION MODAL IMPLEMENTATION -->
+<script>
+function showMigrationModal() {
+    // Create comprehensive migration modal with From/To selectors
+    const modalHtml = `
+        <div class="modal fade" id="migrateDataModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Database Migration Wizard</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="migrationForm">
+                            <!-- Source and Destination -->
+                            <div class="row">
+                                <!-- Source Database -->
+                                <div class="col-md-6">
+                                    <div class="card mb-3" style="border: 2px solid #3b82f6;">
+                                        <div class="card-header bg-primary text-white">
+                                            <h6 class="mb-0"><i class="fas fa-database me-2"></i>Source Database (FROM)</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Database Type</label>
+                                                <select class="form-select" id="migration_source_type" required>
+                                                    <option value="sqlite">SQLite</option>
+                                                    <option value="mssql">Microsoft SQL Server</option>
+                                                    <option value="postgresql">PostgreSQL</option>
+                                                    <option value="mysql">MySQL / MariaDB</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Source SQLite Settings -->
+                                            <div id="migration_source_sqlite_settings">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Database Path</label>
+                                                    <input type="text" class="form-control" id="migration_source_sqlite_path" 
+                                                           value="data/database/chhsca_data.db" readonly>
+                                                    <small class="text-muted">Current SQLite database path</small>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Source MS SQL Settings -->
+                                            <div id="migration_source_mssql_settings" style="display: none;">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Server</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_source_mssql_server">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Database</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_source_mssql_database">
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="migration_source_mssql_trusted">
+                                                    <label class="form-check-label">Windows Auth</label>
+                                                </div>
+                                                <div id="migration_source_mssql_creds" style="display: none;">
+                                                    <input type="text" class="form-control form-control-sm mb-2" id="migration_source_mssql_username" placeholder="Username">
+                                                    <input type="password" class="form-control form-control-sm" id="migration_source_mssql_password" placeholder="Password">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Source PostgreSQL Settings -->
+                                            <div id="migration_source_postgresql_settings" style="display: none;">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Host</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_source_postgresql_host">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Database</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_source_postgresql_database">
+                                                </div>
+                                                <input type="text" class="form-control form-control-sm mb-2" id="migration_source_postgresql_username" placeholder="Username">
+                                                <input type="password" class="form-control form-control-sm" id="migration_source_postgresql_password" placeholder="Password">
+                                            </div>
+                                            
+                                            <!-- Source MySQL Settings -->
+                                            <div id="migration_source_mysql_settings" style="display: none;">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Host</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_source_mysql_host">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Database</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_source_mysql_database">
+                                                </div>
+                                                <input type="text" class="form-control form-control-sm mb-2" id="migration_source_mysql_username" placeholder="Username">
+                                                <input type="password" class="form-control form-control-sm" id="migration_source_mysql_password" placeholder="Password">
+                                            </div>
+                                            
+                                            <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2" id="testSourceBtn">
+                                                <i class="fas fa-plug me-1"></i>Test Source Connection
+                                            </button>
+                                            <div id="sourceStatus" class="mt-2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Destination Database -->
+                                <div class="col-md-6">
+                                    <div class="card mb-3" style="border: 2px solid #10b981;">
+                                        <div class="card-header bg-success text-white">
+                                            <h6 class="mb-0"><i class="fas fa-database me-2"></i>Destination Database (TO)</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="mb-3">
+                                                <label class="form-label fw-bold">Database Type</label>
+                                                <select class="form-select" id="migration_dest_type" required>
+                                                    <option value="sqlite">SQLite</option>
+                                                    <option value="mssql" selected>Microsoft SQL Server</option>
+                                                    <option value="postgresql">PostgreSQL</option>
+                                                    <option value="mysql">MySQL / MariaDB</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Dest SQLite Settings -->
+                                            <div id="migration_dest_sqlite_settings" style="display: none;">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Database Path</label>
+                                                    <input type="text" class="form-control" id="migration_dest_sqlite_path" 
+                                                           value="data/database/chhsca_data.db">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Dest MS SQL Settings -->
+                                            <div id="migration_dest_mssql_settings">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Server</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_dest_mssql_server">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Database</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_dest_mssql_database">
+                                                </div>
+                                                <div class="form-check mb-2">
+                                                    <input class="form-check-input" type="checkbox" id="migration_dest_mssql_trusted" checked>
+                                                    <label class="form-check-label">Windows Auth</label>
+                                                </div>
+                                                <div id="migration_dest_mssql_creds" style="display: none;">
+                                                    <input type="text" class="form-control form-control-sm mb-2" id="migration_dest_mssql_username" placeholder="Username">
+                                                    <input type="password" class="form-control form-control-sm" id="migration_dest_mssql_password" placeholder="Password">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Dest PostgreSQL Settings -->
+                                            <div id="migration_dest_postgresql_settings" style="display: none;">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Host</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_dest_postgresql_host">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Database</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_dest_postgresql_database">
+                                                </div>
+                                                <input type="text" class="form-control form-control-sm mb-2" id="migration_dest_postgresql_username" placeholder="Username">
+                                                <input type="password" class="form-control form-control-sm" id="migration_dest_postgresql_password" placeholder="Password">
+                                            </div>
+                                            
+                                            <!-- Dest MySQL Settings -->
+                                            <div id="migration_dest_mysql_settings" style="display: none;">
+                                                <div class="mb-2">
+                                                    <label class="form-label">Host</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_dest_mysql_host">
+                                                </div>
+                                                <div class="mb-2">
+                                                    <label class="form-label">Database</label>
+                                                    <input type="text" class="form-control form-control-sm" id="migration_dest_mysql_database">
+                                                </div>
+                                                <input type="text" class="form-control form-control-sm mb-2" id="migration_dest_mysql_username" placeholder="Username">
+                                                <input type="password" class="form-control form-control-sm" id="migration_dest_mysql_password" placeholder="Password">
+                                            </div>
+                                            
+                                            <button type="button" class="btn btn-sm btn-outline-success w-100 mt-2" id="testDestBtn">
+                                                <i class="fas fa-plug me-1"></i>Test Destination Connection
+                                            </button>
+                                            <div id="destStatus" class="mt-2"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Migration Options -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Migration Options</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="migration_create_tables" checked>
+                                        <label class="form-check-label fw-bold" for="migration_create_tables">
+                                            Create Tables Automatically
+                                        </label>
+                                        <div class="text-muted small ms-4">If checked, tables will be created in the destination database. If unchecked, tables must already exist.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="startMigrationBtn" disabled>
+                            <i class="fas fa-exchange-alt me-2"></i>Start Migration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('migrateDataModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('migrateDataModal'));
+    modal.show();
+    
+    // Track connection test results
+    let sourceConnected = false;
+    let destConnected = false;
+    
+    // Helper to show/hide settings
+    function toggleSourceSettings() {
+        const type = document.getElementById('migration_source_type').value;
+        document.getElementById('migration_source_sqlite_settings').style.display = type === 'sqlite' ? 'block' : 'none';
+        document.getElementById('migration_source_mssql_settings').style.display = type === 'mssql' ? 'block' : 'none';
+        document.getElementById('migration_source_postgresql_settings').style.display = type === 'postgresql' ? 'block' : 'none';
+        document.getElementById('migration_source_mysql_settings').style.display = type === 'mysql' ? 'block' : 'none';
+        sourceConnected = false;
+        updateMigrationButton();
+    }
+    
+    function toggleDestSettings() {
+        const type = document.getElementById('migration_dest_type').value;
+        document.getElementById('migration_dest_sqlite_settings').style.display = type === 'sqlite' ? 'block' : 'none';
+        document.getElementById('migration_dest_mssql_settings').style.display = type === 'mssql' ? 'block' : 'none';
+        document.getElementById('migration_dest_postgresql_settings').style.display = type === 'postgresql' ? 'block' : 'none';
+        document.getElementById('migration_dest_mysql_settings').style.display = type === 'mysql' ? 'block' : 'none';
+        destConnected = false;
+        updateMigrationButton();
+    }
+    
+    function updateMigrationButton() {
+        document.getElementById('startMigrationBtn').disabled = !(sourceConnected && destConnected);
+    }
+    
+    // Event listeners for type changes
+    document.getElementById('migration_source_type').addEventListener('change', toggleSourceSettings);
+    document.getElementById('migration_dest_type').addEventListener('change', toggleDestSettings);
+    
+    // MS SQL trusted connection toggles
+    document.getElementById('migration_source_mssql_trusted')?.addEventListener('change', function() {
+        document.getElementById('migration_source_mssql_creds').style.display = this.checked ? 'none' : 'block';
+    });
+    document.getElementById('migration_dest_mssql_trusted')?.addEventListener('change', function() {
+        document.getElementById('migration_dest_mssql_creds').style.display = this.checked ? 'none' : 'block';
+    });
+    
+    // Test source connection
+    document.getElementById('testSourceBtn').addEventListener('click', async function() {
+        // Implementation continues...
+    });
+    
+    // Test dest connection
+    document.getElementById('testDestBtn').addEventListener('click', async function() {
+        // Implementation continues...
+    });
+    
+    // Start migration
+    document.getElementById('startMigrationBtn').addEventListener('click', async function() {
+        // Implementation continues...
+    });
+    
+    // Initialize
+    toggleSourceSettings();
+    toggleDestSettings();
+}
+</script>

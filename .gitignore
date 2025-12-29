@@ -1,0 +1,95 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Project-specific sensitive and temp data
+keys/
+temp_data_files/
+data/logs/
+data/backups/
+data/database/
+data/input/
+data/output/
+data/sftp/
+data/ssl/
+
+# Archive and test artifacts
+archive/debug_scripts/
+archive/*.log
+
+# Ignore notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore migration and one-time scripts output
+one_time_scripts/*.log
+one_time_scripts/*.tmp
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+data/etl_data/*.xlsx
+data/etl_data/*.csv
+data/processed/
+data/sftp/downloads/
+keys/*.ppk
+keys/*_backup
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Documentation (generated)
+docs/_build/

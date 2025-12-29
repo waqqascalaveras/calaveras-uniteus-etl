@@ -1,0 +1,27 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel System Information
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page displaying system information, version details,
+    and system status.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'system' %}
+{% set page_title = 'System Information' %}
+{% set page_icon = 'server' %}
+{% set page_description = 'View system health, resources, and diagnostics' %}
+
+{% block admin_content %}
+<div class="card" style="border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <div class="card-body" style="padding: 24px;">
+        <p class="text-center text-muted">System information coming soon...</p>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,908 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel Dashboard
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel dashboard providing system overview, statistics,
+    and quick access to administrative functions.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'dashboard' %}
+{% set page_title = 'Admin Control Panel' %}
+{% set page_icon = 'tachometer-alt' %}
+{% set page_description = '' %}
+
+{% block admin_content %}
+
+<!-- Quick Status Cards -->
+<div class="row mb-3">
+    <div class="col-md-2">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;" onclick="window.location.href='/admincp/users'">
+            <div class="card-body" style="padding: 12px 8px;">
+                <div style="font-size: 24px; margin-bottom: 6px;">
+                    <i class="fas fa-users text-primary"></i>
+                </div>
+                <h4 class="mb-0" id="activeUsersCount" style="color: #2c5282; font-size: 20px;">
+                    <span class="loading-placeholder" data-target="activeUsersCount">
+                        <i class="fas fa-spinner fa-spin me-1" style="font-size: 14px;"></i>
+                    </span>
+                </h4>
+                <small class="text-muted" style="font-size: 11px;">Active Users</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer;" onclick="window.location.href='/admincp/audit'">
+            <div class="card-body" style="padding: 12px 8px;">
+                <div style="font-size: 24px; margin-bottom: 6px;">
+                    <i class="fas fa-history text-info"></i>
+                </div>
+                <h4 class="mb-0" id="todayActionsCount" style="color: #4299e1; font-size: 20px;">
+                    <span class="loading-placeholder" data-target="todayActionsCount">
+                        <i class="fas fa-spinner fa-spin me-1" style="font-size: 14px;"></i>
+                    </span>
+                </h4>
+                <small class="text-muted" style="font-size: 11px;">Actions Today</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 6px;">
+            <div class="card-body" style="padding: 12px 8px;">
+                <div style="font-size: 24px; margin-bottom: 6px;">
+                    <i class="fas fa-memory text-success"></i>
+                </div>
+                <h4 class="mb-0 text-success" id="ramUsage" style="font-size: 16px;">
+                    <span class="loading-placeholder" data-target="ramUsage">
+                        <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>
+                    </span>
+                </h4>
+                <small class="text-muted" style="font-size: 11px;">RAM Usage</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 6px;">
+            <div class="card-body" style="padding: 12px 8px;">
+                <div style="font-size: 24px; margin-bottom: 6px;">
+                    <i class="fas fa-database text-warning"></i>
+                </div>
+                <h4 class="mb-0 text-warning" id="dbSize" style="font-size: 16px;">
+                    <span class="loading-placeholder" data-target="dbSize">
+                        <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>
+                    </span>
+                </h4>
+                <small class="text-muted" style="font-size: 11px;">Database Size</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 6px;">
+            <div class="card-body" style="padding: 12px 8px;">
+                <div style="font-size: 24px; margin-bottom: 6px;">
+                    <i class="fab fa-python text-info"></i>
+                </div>
+                <h4 class="mb-0 text-info" id="pythonMemory" style="font-size: 16px;">
+                    <span class="loading-placeholder" data-target="pythonMemory">
+                        <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>
+                    </span>
+                </h4>
+                <small class="text-muted" style="font-size: 11px;">Python Memory</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card text-center" style="border: 1px solid #e2e8f0; border-radius: 6px;">
+            <div class="card-body" style="padding: 12px 8px;">
+                <div style="font-size: 24px; margin-bottom: 6px;">
+                    <i class="fas fa-clock text-muted"></i>
+                </div>
+                <h4 class="mb-0 text-muted" id="systemUptime" style="font-size: 16px;">
+                    <span class="loading-placeholder" data-target="systemUptime">
+                        <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>
+                    </span>
+                </h4>
+                <small class="text-muted" style="font-size: 11px;">System Uptime</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Server Environment Information -->
+<div class="card mb-4" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+            <i class="fas fa-server me-2" style="color: #2c5282;"></i>Server Specifications
+        </h5>
+    </div>
+    <div class="card-body" style="padding: 24px;">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background: #ebf8ff; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <i class="fas fa-microchip" style="color: #2c5282; font-size: 18px;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #718096; font-weight: 500; margin-bottom: 4px;">Processor</div>
+                        <div id="serverProcessor" style="font-size: 14px; font-weight: 600; color: #2d3748; font-family: 'Courier New', monospace;">
+                            <span class="loading-placeholder">
+                                <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>Loading...
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background: #fff5f5; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <i class="fab fa-windows" style="color: #e53e3e; font-size: 18px;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #718096; font-weight: 500; margin-bottom: 4px;">Windows Version</div>
+                        <div id="windowsVersion" style="font-size: 14px; font-weight: 600; color: #2d3748;">
+                            <span class="loading-placeholder">
+                                <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>Loading...
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background: #f0fff4; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <i class="fas fa-network-wired" style="color: #38a169; font-size: 18px;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #718096; font-weight: 500; margin-bottom: 4px;">Web Server</div>
+                        <div id="webServerInfo" style="font-size: 14px; font-weight: 600; color: #2d3748; font-family: 'Courier New', monospace;">
+                            <span class="loading-placeholder">
+                                <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>Loading...
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <div style="width: 40px; height: 40px; border-radius: 8px; background: #f0fff4; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                        <i class="fas fa-user-shield" style="color: #38a169; font-size: 18px;"></i>
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #718096; font-weight: 500; margin-bottom: 4px;">Windows User (AD)</div>
+                        <div id="windowsUsername" style="font-size: 14px; font-weight: 600; color: #2d3748; font-family: 'Courier New', monospace;">
+                            <span class="loading-placeholder">
+                                <i class="fas fa-spinner fa-spin me-1" style="font-size: 12px;"></i>Loading...
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Components Status -->
+<div class="card mb-4" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px;">
+        <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+            <i class="fas fa-cogs me-2" style="color: #2c5282;"></i>System Components & Integrations
+        </h5>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                    <tr>
+                        <th style="padding: 12px 15px; width: 50px;"></th>
+                        <th style="padding: 12px 15px;">Component</th>
+                        <th style="padding: 12px 15px;">Status</th>
+                        <th style="padding: 12px 15px;">Status Information</th>
+                    </tr>
+                </thead>
+                <tbody id="systemComponentsTable">
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading system components...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Security Controls Status (Collapsed by default) -->
+<div class="card mb-4" style="border: 1px solid #e2e8f0; border-radius: 8px;">
+    <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px; cursor: pointer;" 
+         data-bs-toggle="collapse" data-bs-target="#securityControlsCollapse" aria-expanded="false" aria-controls="securityControlsCollapse">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="font-size: 16px; font-weight: 600; color: #1a202c;">
+                <i class="fas fa-shield-alt me-2" style="color: #2c5282;"></i>Security Controls
+            </h5>
+            <i class="fas fa-chevron-down" id="securityControlsChevron" style="color: #718096; transition: transform 0.2s;"></i>
+        </div>
+    </div>
+    <div class="collapse" id="securityControlsCollapse">
+        <div class="card-body" style="padding: 0;">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead style="background: #f7fafc; border-bottom: 2px solid #e2e8f0;">
+                        <tr>
+                            <th style="padding: 15px; width: 50px;"></th>
+                            <th style="padding: 15px;">Control</th>
+                            <th style="padding: 15px;">Status</th>
+                            <th style="padding: 15px;">Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="securityControlsTable">
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Loading security controls...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.loading-placeholder {
+    display: inline-block;
+    color: #a0aec0;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+.skeleton-row {
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0%, 100% { background-color: #f7fafc; }
+    50% { background-color: #edf2f7; }
+}
+
+.loading-skeleton {
+    display: inline-block;
+    width: 60px;
+    height: 16px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+</style>
+
+<script>
+// Dashboard data cache
+const dashboardCache = {
+    quickStats: null,
+    securityControls: null,
+    systemComponents: null,
+    lastUpdate: {},
+    cacheTimeout: {
+        quickStats: 30000,      // 30 seconds
+        securityControls: 60000, // 1 minute
+        systemComponents: 30000  // 30 seconds
+    }
+};
+
+// Restore cached data immediately for smooth UX
+function restoreCachedData() {
+    // Restore quick stats
+    if (dashboardCache.quickStats) {
+        const stats = dashboardCache.quickStats;
+        updateElement('activeUsersCount', stats.activeUsers || '0');
+        updateElement('todayActionsCount', stats.todayActions || '0');
+        updateElement('ramUsage', stats.ramUsage || 'N/A');
+        updateElement('dbSize', stats.dbSize || 'N/A');
+        updateElement('pythonMemory', stats.pythonMemory || 'N/A');
+        updateElement('systemUptime', stats.systemUptime || 'N/A');
+    }
+    
+    // Restore system components (if available)
+    if (dashboardCache.systemComponents) {
+        renderTable('systemComponentsTable', dashboardCache.systemComponents);
+    }
+    
+    // Restore server specs and Windows username
+    if (dashboardCache.quickStats) {
+        if (dashboardCache.quickStats.processor) {
+            updateServerProcessor(dashboardCache.quickStats.processor, dashboardCache.quickStats.cpu_count);
+        }
+        if (dashboardCache.quickStats.windows_version) {
+            updateWindowsVersion(dashboardCache.quickStats.windows_version);
+        }
+        if (dashboardCache.quickStats.server_port) {
+            updateWebServerInfo(dashboardCache.quickStats.server_protocol, dashboardCache.quickStats.server_port, dashboardCache.quickStats.server_host);
+        }
+        if (dashboardCache.quickStats.windowsUsername) {
+            updateWindowsUsername(dashboardCache.quickStats.windowsUsername);
+        }
+    }
+    
+    // Security controls are lazy loaded, so we don't restore them here
+}
+
+function updateElement(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        const placeholder = element.querySelector('.loading-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        element.textContent = value;
+    }
+}
+
+function updateServerProcessor(processor, cpuCount) {
+    const element = document.getElementById('serverProcessor');
+    if (element) {
+        const placeholder = element.querySelector('.loading-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        // Truncate long processor names and add CPU count
+        let displayText = processor;
+        if (displayText.length > 50) {
+            displayText = displayText.substring(0, 47) + '...';
+        }
+        if (cpuCount) {
+            displayText += ` (${cpuCount} cores)`;
+        }
+        element.textContent = displayText;
+    }
+}
+
+function updateWindowsVersion(version) {
+    const element = document.getElementById('windowsVersion');
+    if (element) {
+        const placeholder = element.querySelector('.loading-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        element.textContent = version;
+    }
+}
+
+function updateWebServerInfo(protocol, port, host) {
+    const element = document.getElementById('webServerInfo');
+    if (element) {
+        const placeholder = element.querySelector('.loading-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        const hostDisplay = host === '0.0.0.0' ? 'All Interfaces' : host;
+        element.textContent = `${protocol} on ${hostDisplay}:${port}`;
+    }
+}
+
+function updateWindowsUsername(username) {
+    const element = document.getElementById('windowsUsername');
+    if (element) {
+        const placeholder = element.querySelector('.loading-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+        element.textContent = username;
+    }
+}
+
+function isCacheValid(key) {
+    if (!dashboardCache.lastUpdate[key]) return false;
+    const age = Date.now() - dashboardCache.lastUpdate[key];
+    return age < dashboardCache.cacheTimeout[key];
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Restore cached data immediately for instant display
+    restoreCachedData();
+    
+    // Load data with priority: critical first, then lazy load the rest
+    loadDashboardData();
+});
+
+async function loadDashboardData() {
+    // Priority 1: Load quick stats first (most visible)
+    loadQuickStats().then(() => {
+        // Priority 2: Load system components (important but can wait)
+        loadSystemComponents();
+    });
+    
+    // Priority 3: Lazy load security controls (only when expanded)
+    // This is handled by the collapse event listener below
+}
+
+async function loadQuickStats() {
+    // Check cache first
+    if (isCacheValid('quickStats') && dashboardCache.quickStats) {
+        const stats = dashboardCache.quickStats;
+        updateElement('activeUsersCount', stats.activeUsers || '0');
+        updateElement('todayActionsCount', stats.todayActions || '0');
+        updateElement('ramUsage', stats.ramUsage || 'N/A');
+        updateElement('dbSize', stats.dbSize || 'N/A');
+        updateElement('pythonMemory', stats.pythonMemory || 'N/A');
+        updateElement('systemUptime', stats.systemUptime || 'N/A');
+        
+        // Restore server specs and Windows username from cache
+        if (stats.processor) {
+            updateServerProcessor(stats.processor, stats.cpu_count);
+        }
+        if (stats.windows_version) {
+            updateWindowsVersion(stats.windows_version);
+        }
+        if (stats.server_port) {
+            updateWebServerInfo(stats.server_protocol, stats.server_port, stats.server_host);
+        }
+        if (stats.windowsUsername) {
+            updateWindowsUsername(stats.windowsUsername);
+        }
+        
+        return; // Use cached data
+    }
+    
+    try {
+        // Load all stats in parallel for faster loading
+        const [usersResponse, auditResponse, systemResponse] = await Promise.all([
+            fetchWithRoleCheck('/api/admin/users'),
+            (async () => {
+                const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                return fetch(`/api/admin/audit-statistics?start_date=${today}&end_date=${tomorrowStr}`);
+            })(),
+            fetchWithRoleCheck('/api/admin/system-info')
+        ]);
+        
+        // Process responses
+        const usersData = await usersResponse.json();
+        const auditData = await auditResponse.json();
+        const systemData = await systemResponse.json();
+        
+        // Extract values
+        const activeUsers = usersData.active || 0;
+        const todayActions = auditData.success ? (auditData.statistics?.total_events || 0) : 0;
+        const ramUsage = systemData.ram_usage || 'N/A';
+        const dbSize = systemData.db_size || 'N/A';
+        const pythonMemory = systemData.python_memory || 'N/A';
+        const systemUptime = systemData.uptime || 'N/A';
+        const processor = systemData.processor || 'Unknown';
+        const cpuCount = systemData.cpu_count || null;
+        const windowsVersion = systemData.windows_version || 'Unknown';
+        const serverProtocol = systemData.server_protocol || 'HTTP';
+        const serverPort = systemData.server_port || 8000;
+        const serverHost = systemData.server_host || '0.0.0.0';
+        const windowsUsername = systemData.windows_username || 'Unknown';
+        
+        // Update UI
+        updateElement('activeUsersCount', activeUsers);
+        updateElement('todayActionsCount', todayActions);
+        updateElement('ramUsage', ramUsage);
+        updateElement('dbSize', dbSize);
+        updateElement('pythonMemory', pythonMemory);
+        updateElement('systemUptime', systemUptime);
+        
+        // Update server specs and Windows username
+        updateServerProcessor(processor, cpuCount);
+        updateWindowsVersion(windowsVersion);
+        updateWebServerInfo(serverProtocol, serverPort, serverHost);
+        updateWindowsUsername(windowsUsername);
+        
+        // Cache the results
+        dashboardCache.quickStats = {
+            activeUsers,
+            todayActions,
+            ramUsage,
+            dbSize,
+            pythonMemory,
+            systemUptime,
+            processor,
+            cpu_count: cpuCount,
+            windows_version: windowsVersion,
+            server_protocol: serverProtocol,
+            server_port: serverPort,
+            server_host: serverHost,
+            windowsUsername
+        };
+        dashboardCache.lastUpdate.quickStats = Date.now();
+        
+    } catch (error) {
+        console.error('Error loading quick stats:', error);
+        updateElement('activeUsersCount', '0');
+        updateElement('todayActionsCount', '0');
+        updateElement('ramUsage', 'N/A');
+        updateElement('dbSize', 'N/A');
+        updateElement('pythonMemory', 'N/A');
+        updateElement('systemUptime', 'N/A');
+        updateServerProcessor('Unknown', null);
+        updateWindowsVersion('Unknown');
+        updateWebServerInfo('HTTP', 8000, '0.0.0.0');
+        updateWindowsUsername('Unknown');
+    }
+}
+
+async function loadSecurityControls() {
+    // Check cache first
+    if (isCacheValid('securityControls') && dashboardCache.securityControls) {
+        renderSecurityTable('securityControlsTable', dashboardCache.securityControls);
+        return; // Use cached data
+    }
+    
+    // Show loading state
+    const tableBody = document.getElementById('securityControlsTable');
+    if (tableBody && !tableBody.querySelector('.loading-placeholder')) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4 text-muted">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Loading security controls...
+                </td>
+            </tr>
+        `;
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/security/health-check');
+        const data = await response.json();
+        
+        if (!data.success) throw new Error('Failed to load security controls');
+        
+        const controls = [
+            {
+                icon: 'fa-lock',
+                name: 'HTTPS / SSL',
+                check: {
+                    status: data.checks.https_enabled.status,
+                    message: data.checks.https_enabled.status === 'fail' 
+                        ? 'HTTPS is not enabled. All traffic should be encrypted using SSL/TLS certificates to protect data in transit.'
+                        : data.checks.https_enabled.message || 'HTTPS is properly configured and enabled.'
+                },
+                critical: true
+            },
+            {
+                icon: 'fa-user-shield',
+                name: 'Default Password',
+                check: {
+                    status: data.checks.default_password.status,
+                    message: data.checks.default_password.status === 'fail'
+                        ? 'Default password detected. Change the default administrator password immediately to prevent unauthorized access.'
+                        : data.checks.default_password.message || 'No default passwords detected. All accounts use custom passwords.'
+                },
+                critical: true
+            },
+            {
+                icon: 'fa-key',
+                name: 'PHI Hash Salt',
+                check: {
+                    status: data.checks.phi_hash_salt.status,
+                    message: data.checks.phi_hash_salt.status === 'fail'
+                        ? 'PHI hash salt is not configured. This is required for secure hashing of Protected Health Information.'
+                        : data.checks.phi_hash_salt.message || 'PHI hash salt is properly configured for secure data hashing.'
+                },
+                critical: true
+            },
+            {
+                icon: 'fa-shield-alt',
+                name: 'CSRF Protection',
+                check: {
+                    status: data.checks.csrf_protection.status,
+                    message: data.checks.csrf_protection.status === 'fail'
+                        ? 'CSRF protection is not enabled. This leaves the application vulnerable to Cross-Site Request Forgery attacks.'
+                        : data.checks.csrf_protection.message || 'CSRF protection is active and protecting against cross-site request forgery attacks.'
+                },
+                critical: true
+            },
+            {
+                icon: 'fa-code',
+                name: 'XSS Protection',
+                check: {
+                    status: 'warning',
+                    message: 'Partial protection enabled. Additional input sanitization and output encoding recommended for comprehensive XSS protection.'
+                },
+                critical: false
+            },
+            {
+                icon: 'fa-clock',
+                name: 'Session Security',
+                check: {
+                    status: data.checks.session_security.status,
+                    message: data.checks.session_security.status === 'fail'
+                        ? 'Session security issues detected. Sessions may not be properly secured, expiring, or invalidated on logout.'
+                        : data.checks.session_security.message || 'Session security is properly configured with secure cookies and timeout settings.'
+                },
+                critical: false
+            },
+            {
+                icon: 'fa-file-alt',
+                name: 'Audit Logging',
+                check: {
+                    status: data.checks.audit_logging.status,
+                    message: data.checks.audit_logging.status === 'fail'
+                        ? 'Audit logging is not properly configured. User actions and system events may not be tracked for compliance.'
+                        : data.checks.audit_logging.message || 'Audit logging is active and recording all user actions and system events.'
+                },
+                critical: false
+            },
+            {
+                icon: 'fa-network-wired',
+                name: 'IP Restrictions',
+                check: {
+                    status: data.checks.ip_restrictions.status,
+                    message: data.checks.ip_restrictions.status === 'fail'
+                        ? 'IP restrictions are not configured. Consider implementing IP whitelisting for additional security.'
+                        : data.checks.ip_restrictions.message || 'IP restrictions are properly configured to limit access to authorized networks.'
+                },
+                critical: false
+            }
+        ];
+        
+        renderSecurityTable('securityControlsTable', controls);
+        
+        // Cache the results
+        dashboardCache.securityControls = controls;
+        dashboardCache.lastUpdate.securityControls = Date.now();
+        
+    } catch (error) {
+        console.error('Error loading security controls:', error);
+        const tableBody = document.getElementById('securityControlsTable');
+        if (tableBody) {
+            tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Error loading security controls: ${error.message}
+                </td>
+            </tr>
+        `;
+        }
+    }
+}
+
+function renderSecurityTable(tableId, items) {
+    const tbody = document.getElementById(tableId);
+    tbody.innerHTML = '';
+    
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f1f5f9';
+        
+        // Icon
+        const iconTd = document.createElement('td');
+        iconTd.style.cssText = 'padding: 15px; text-align: center;';
+        iconTd.innerHTML = `<i class="fas ${item.icon}" style="font-size: 20px; color: ${getStatusColor(item.check.status)};"></i>`;
+        tr.appendChild(iconTd);
+        
+        // Name
+        const nameTd = document.createElement('td');
+        nameTd.style.cssText = 'padding: 15px; font-weight: 500;';
+        nameTd.textContent = item.name;
+        tr.appendChild(nameTd);
+        
+        // Status
+        const statusTd = document.createElement('td');
+        statusTd.style.cssText = 'padding: 15px;';
+        statusTd.innerHTML = getStatusBadge(item.check.status);
+        tr.appendChild(statusTd);
+        
+        // Details (with more information)
+        const detailsTd = document.createElement('td');
+        detailsTd.style.cssText = 'padding: 15px; color: #4a5568; font-size: 13px; line-height: 1.5;';
+        detailsTd.textContent = item.check.message;
+        tr.appendChild(detailsTd);
+        
+        tbody.appendChild(tr);
+    });
+}
+
+async function loadSystemComponents() {
+    // Check cache first
+    if (isCacheValid('systemComponents') && dashboardCache.systemComponents) {
+        renderTable('systemComponentsTable', dashboardCache.systemComponents);
+        return; // Use cached data
+    }
+    
+    // Show loading state (already in HTML, but ensure it's visible)
+    const tableBody = document.getElementById('systemComponentsTable');
+    if (tableBody && tableBody.children.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4 text-muted">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Loading system components...
+                </td>
+            </tr>
+        `;
+    }
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/system-components/status');
+        if (!response.ok) {
+            throw new Error('Failed to load system components');
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load system components');
+        }
+        
+        // Map component data to display format
+        const componentIcons = {
+            'authentication': 'fa-users-cog',
+            'database': 'fa-database',
+            'sftp': 'fa-cloud-download-alt',
+            'active_directory': 'fa-network-wired',
+            'siem': 'fa-file-alt',
+            'etl_engine': 'fa-cogs'
+        };
+        
+        const componentCritical = {
+            'authentication': true,
+            'database': true,
+            'sftp': false,
+            'active_directory': true,
+            'siem': false,
+            'etl_engine': false
+        };
+        
+        // Order components for display
+        const componentOrder = ['authentication', 'database', 'active_directory', 'sftp', 'siem', 'etl_engine'];
+        
+        const components = componentOrder
+            .filter(key => data.components[key])
+            .map(key => {
+                const comp = data.components[key];
+                return {
+                    icon: componentIcons[key] || 'fa-cog',
+                    name: comp.name,
+                    check: {
+                        status: comp.status,
+                        message: comp.details,
+                        info: comp.info
+                    },
+                    critical: componentCritical[key] || false
+                };
+            });
+        
+        renderTable('systemComponentsTable', components);
+        
+        // Cache the results
+        dashboardCache.systemComponents = components;
+        dashboardCache.lastUpdate.systemComponents = Date.now();
+        
+    } catch (error) {
+        console.error('Error loading system components:', error);
+        const tableBody = document.getElementById('systemComponentsTable');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center py-4 text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Error loading system components: ${error.message}
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+function renderTable(tableId, items) {
+    const tbody = document.getElementById(tableId);
+    tbody.innerHTML = '';
+    
+    items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f1f5f9';
+        
+        // Icon
+        const iconTd = document.createElement('td');
+        iconTd.style.cssText = 'padding: 12px 15px; text-align: center;';
+        iconTd.innerHTML = `<i class="fas ${item.icon}" style="font-size: 18px; color: ${getStatusColor(item.check.status)};"></i>`;
+        tr.appendChild(iconTd);
+        
+        // Name
+        const nameTd = document.createElement('td');
+        nameTd.style.cssText = 'padding: 12px 15px; font-weight: 500;';
+        nameTd.textContent = item.name;
+        tr.appendChild(nameTd);
+        
+        // Status
+        const statusTd = document.createElement('td');
+        statusTd.style.cssText = 'padding: 12px 15px;';
+        statusTd.innerHTML = getStatusBadge(item.check.status);
+        tr.appendChild(statusTd);
+        
+        // Details - now with two lines: main message and info
+        const detailsTd = document.createElement('td');
+        detailsTd.style.cssText = 'padding: 12px 15px; color: #4a5568; font-size: 13px; line-height: 1.5;';
+        detailsTd.innerHTML = `
+            <div style="font-weight: 500; margin-bottom: 4px;">${item.check.message}</div>
+            ${item.check.info ? `<div style="font-size: 11px; color: #718096;">${item.check.info}</div>` : ''}
+        `;
+        tr.appendChild(detailsTd);
+        
+        tbody.appendChild(tr);
+    });
+}
+
+function getStatusColor(status) {
+    const colors = {
+        'pass': '#48bb78',
+        'warning': '#ed8936',
+        'fail': '#f56565',
+        'unknown': '#a0aec0'
+    };
+    return colors[status] || colors['unknown'];
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'pass': '<span class="badge" style="background: #48bb78; font-size: 12px; padding: 6px 12px;"><i class="fas fa-check-circle me-1"></i>PASS</span>',
+        'warning': '<span class="badge" style="background: #ed8936; font-size: 12px; padding: 6px 12px;"><i class="fas fa-exclamation-triangle me-1"></i>CONSIDERATION</span>',
+        'fail': '<span class="badge" style="background: #f56565; font-size: 12px; padding: 6px 12px;"><i class="fas fa-times-circle me-1"></i>OPPORTUNITY</span>',
+        'unknown': '<span class="badge" style="background: #a0aec0; font-size: 12px; padding: 6px 12px;"><i class="fas fa-question-circle me-1"></i>UNKNOWN</span>'
+    };
+    return badges[status] || badges['unknown'];
+}
+
+// Add collapse animation handler and lazy load security controls
+document.addEventListener('DOMContentLoaded', function() {
+    const collapseElement = document.getElementById('securityControlsCollapse');
+    const chevron = document.getElementById('securityControlsChevron');
+    
+    if (collapseElement && chevron) {
+        collapseElement.addEventListener('show.bs.collapse', function() {
+            chevron.style.transform = 'rotate(180deg)';
+            // Lazy load security controls when expanded
+            if (!isCacheValid('securityControls') || !dashboardCache.securityControls) {
+                loadSecurityControls();
+            }
+        });
+        collapseElement.addEventListener('hide.bs.collapse', function() {
+            chevron.style.transform = 'rotate(0deg)';
+        });
+    }
+    
+    // Periodically refresh data in background (every 5 minutes)
+    // Only refresh if page is visible and cache is stale
+    setInterval(() => {
+        if (!document.hidden) {
+            // Only refresh if cache is stale
+            if (!isCacheValid('quickStats')) {
+                loadQuickStats();
+            }
+            if (!isCacheValid('systemComponents')) {
+                loadSystemComponents();
+            }
+        }
+    }, 300000);
+    
+    // Refresh when page becomes visible if data is stale
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            if (!isCacheValid('quickStats')) {
+                loadQuickStats();
+            }
+            if (!isCacheValid('systemComponents')) {
+                loadSystemComponents();
+            }
+        }
+    });
+});
+</script>
+
+{% endblock %}
+
+

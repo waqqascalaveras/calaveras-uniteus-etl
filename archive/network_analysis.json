@@ -1,0 +1,101 @@
+{
+  "hostname_info": {
+    "hostname": "PH5CD10334DB",
+    "fqdn": "PH5CD10334DB.calco.local",
+    "domain": "ORION",
+    "computer_name": "PH5CD10334DB.calco.local",
+    "dns_suffix": "calco.local"
+  },
+  "interfaces": [
+    {
+      "name": "2",
+      "type": "Ethernet",
+      "dns": "calco.local"
+    },
+    {
+      "name": "4",
+      "type": "Ethernet",
+      "dns": "10.10.41.41",
+      "ipv4": "192.168.86.147",
+      "subnet": "255.255.255.0",
+      "gateway": "192.168.86.1"
+    },
+    {
+      "name": "Local Area Connection* 1",
+      "type": "Wireless"
+    },
+    {
+      "name": "Description . . . . . . . . . . . : Microsoft Wi-Fi Direct Virtual Adapter",
+      "type": "Unknown"
+    },
+    {
+      "name": "Local Area Connection* 2",
+      "type": "Wireless"
+    },
+    {
+      "name": "Description . . . . . . . . . . . : Microsoft Wi-Fi Direct Virtual Adapter #2",
+      "type": "Unknown"
+    },
+    {
+      "name": "Wi-Fi",
+      "type": "Wireless"
+    },
+    {
+      "name": "Bluetooth Network Connection",
+      "type": "Ethernet"
+    }
+  ],
+  "primary_ip": "192.168.86.147",
+  "dns_tests": {
+    "hostname": {
+      "hostname": "PH5CD10334DB",
+      "resolves": true,
+      "ip_addresses": [
+        "192.168.86.147"
+      ],
+      "reverse_dns": "PH5CD10334DB.calco.local",
+      "error": null
+    },
+    "fqdn": {
+      "hostname": "PH5CD10334DB.calco.local",
+      "resolves": true,
+      "ip_addresses": [
+        "192.168.86.147"
+      ],
+      "reverse_dns": "PH5CD10334DB.calco.local",
+      "error": null
+    }
+  },
+  "wins_tests": {
+    "hostname": {
+      "hostname": "PH5CD10334DB",
+      "wins_resolves": false,
+      "error": "WINS resolution failed or service not available"
+    }
+  },
+  "ports": {
+    "80": {
+      "port": 80,
+      "available": true,
+      "in_use_by": null,
+      "error": null
+    },
+    "443": {
+      "port": 443,
+      "available": true,
+      "in_use_by": null,
+      "error": null
+    },
+    "8000": {
+      "port": 8000,
+      "available": true,
+      "in_use_by": null,
+      "error": null
+    }
+  },
+  "admin": {
+    "is_admin": false,
+    "can_use_privileged_ports": false,
+    "method": "Windows UAC check"
+  }
+}

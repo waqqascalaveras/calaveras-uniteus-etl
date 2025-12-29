@@ -1,0 +1,688 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel System Configuration
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for system configuration, application settings,
+    and general system preferences.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'config' %}
+{% set page_title = 'System Configuration' %}
+{% set page_icon = 'cogs' %}
+{% set page_description = 'Configure system settings and preferences' %}
+
+{% block admin_content %}
+
+<style>
+.config-section {
+    margin-bottom: 24px;
+}
+
+.config-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+    transition: all 0.2s ease-in-out;
+}
+.config-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: #cbd5e0;
+}
+.config-card[onclick]:hover {
+    cursor: pointer;
+    background-color: #f7fafc;
+}
+
+.config-card-header {
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 20px;
+}
+
+.config-card-body {
+    padding: 24px;
+}
+
+.config-value {
+    font-family: 'Courier New', monospace;
+    background: #f7fafc;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+}
+
+.loading-placeholder {
+    display: inline-block;
+    color: #a0aec0;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+.info-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #edf2f7;
+    color: #4a5568;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.info-icon {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    background: #4299e1;
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: normal;
+    cursor: help;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: all 0.2s ease;
+}
+
+.info-icon:hover {
+    background: #3182ce;
+    transform: scale(1.15);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+</style>
+
+<!-- Quick Links to Specialized Config Pages -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card config-card" style="cursor: pointer;" onclick="window.location.href='/admincp/database'">
+            <div class="config-card-header">
+                <h6 class="mb-0" style="font-weight: 600; font-size: 14px; color: #2d3748;">
+                    <i class="fas fa-database me-2" style="color: #2c5282;"></i>Database Configuration
+                </h6>
+            </div>
+            <div class="config-card-body">
+                <p class="text-muted mb-0" style="font-size: 13px;">
+                    Configure database connection settings, connection pools, and database type.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card config-card" style="cursor: pointer;" onclick="window.location.href='/settings/siem'">
+            <div class="config-card-header">
+                <h6 class="mb-0" style="font-weight: 600; font-size: 14px; color: #2d3748;">
+                    <i class="fas fa-file-alt me-2" style="color: #2c5282;"></i>Logging Configuration
+                </h6>
+            </div>
+            <div class="config-card-body">
+                <p class="text-muted mb-0" style="font-size: 13px;">
+                    Configure SIEM logging, JSON logs, Windows Event Log, and syslog settings.
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card config-card" style="cursor: pointer;" onclick="window.location.href='/settings/sftp'">
+            <div class="config-card-header">
+                <h6 class="mb-0" style="font-weight: 600; font-size: 14px; color: #2d3748;">
+                    <i class="fas fa-cloud-download-alt me-2" style="color: #2c5282;"></i>SFTP Configuration
+                </h6>
+            </div>
+            <div class="config-card-body">
+                <p class="text-muted mb-0" style="font-size: 13px;">
+                    Configure SFTP connection, authentication, auto-download, and file patterns.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Configuration Sections -->
+<div class="row">
+    <div class="col-md-12">
+        
+        <!-- ETL Configuration -->
+        <div class="card config-card">
+            <div class="config-card-header">
+                <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                    <i class="fas fa-exchange-alt me-2" style="color: #2c5282;"></i>ETL Processing Configuration
+                </h5>
+            </div>
+            <div class="config-card-body">
+                <div id="etlConfigContent">
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        <span class="loading-placeholder">Loading ETL configuration...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Web Server Configuration -->
+        <div class="card config-card">
+            <div class="config-card-header">
+                <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                    <i class="fas fa-server me-2" style="color: #2c5282;"></i>Web Server Configuration
+                </h5>
+            </div>
+            <div class="config-card-body">
+                <div id="webConfigContent">
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        <span class="loading-placeholder">Loading web server configuration...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logging Configuration -->
+        <div class="card config-card">
+            <div class="config-card-header">
+                <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                    <i class="fas fa-file-alt me-2" style="color: #2c5282;"></i>Application Logging Configuration
+                </h5>
+            </div>
+            <div class="config-card-body">
+                <div id="loggingConfigContent">
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        <span class="loading-placeholder">Loading logging configuration...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Directory Configuration -->
+        <div class="card config-card">
+            <div class="config-card-header">
+                <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                    <i class="fas fa-folder me-2" style="color: #2c5282;"></i>Directory Structure Configuration
+                </h5>
+            </div>
+            <div class="config-card-body">
+                <div id="directoriesConfigContent">
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        <span class="loading-placeholder">Loading directory configuration...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Configuration -->
+        <div class="card config-card">
+            <div class="config-card-header">
+                <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                    <i class="fas fa-shield-alt me-2" style="color: #2c5282;"></i>Security Configuration
+                </h5>
+            </div>
+            <div class="config-card-body">
+                <div id="securityConfigContent">
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin me-2"></i>
+                        <span class="loading-placeholder">Loading security configuration...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// Configuration tooltips - descriptions for each field
+const configTooltips = {
+    // ETL Configuration
+    'batch_size': 'Number of records processed in each batch during ETL operations. Larger batches improve performance but use more memory.',
+    'max_workers': 'Maximum number of parallel worker threads for concurrent ETL processing. Higher values increase throughput but may overload the system.',
+    'timeout_seconds': 'Maximum time (in seconds) allowed for a single ETL operation before timing out. Prevents operations from hanging indefinitely.',
+    'retry_attempts': 'Number of times to retry a failed ETL operation before giving up. Helps handle transient errors.',
+    'skip_processed_files': 'When enabled, files that have already been processed are automatically skipped. Prevents duplicate processing.',
+    'force_reprocess': 'When enabled, all files are reprocessed regardless of previous processing status. Useful for data corrections.',
+    'file_patterns': 'Glob patterns (e.g., *.txt, *.csv) used to discover files during ETL. Only files matching these patterns are processed.',
+    'ignored_filename_prefixes': 'Files with these prefixes in their names are ignored when extracting table names. Useful for test/sample files.',
+    
+    // Web Server Configuration
+    'host': 'Network interface to bind the web server to. 0.0.0.0 = all interfaces, 127.0.0.1 = localhost only.',
+    'port': 'TCP port number for the web server. Must be available and not in use by another application.',
+    'reload': 'Auto-reload mode for development. When enabled, the server automatically restarts when code changes are detected.',
+    'log_level': 'Verbosity level for web server logs. Options: DEBUG, INFO, WARNING, ERROR, CRITICAL. Lower levels show more detail.',
+    'cors_origins': 'Allowed origins for Cross-Origin Resource Sharing (CORS). Use ["*"] for all origins, or specific domains for production.',
+    
+    // Logging Configuration
+    'level': 'Minimum log level to record. Logs below this level are filtered out. Options: DEBUG, INFO, WARNING, ERROR, CRITICAL.',
+    'format': 'Format string for log messages. Controls how log entries are structured and what information is included.',
+    'file_rotation_size': 'Maximum size (in bytes) for a log file before it is rotated. Older logs are archived and new files are created.',
+    'file_retention_count': 'Number of rotated log files to keep. Older files beyond this count are automatically deleted.',
+    'enable_console': 'When enabled, logs are output to the console/stdout. Useful for debugging and monitoring.',
+    'enable_file': 'When enabled, logs are written to files in the logs directory. Essential for production logging.',
+    
+    // Directory Configuration
+    'project_root': 'Root directory of the application. All other paths are relative to this unless absolute paths are specified.',
+    'data_dir': 'Main directory for storing application data files, including databases and temporary files.',
+    'input_dir': 'Directory where UniteUs export files are placed for ETL processing. Files here are automatically discovered and processed.',
+    'output_dir': 'Directory for generated reports, exports, and output files created by the application.',
+    'logs_dir': 'Directory where application log files are stored. Logs are rotated and archived here.',
+    'database_dir': 'Directory containing database files. For SQLite, this is where .db files are stored.',
+    'backup_dir': 'Directory for database backups. Automated backups are stored here for disaster recovery.',
+    
+    // Security Configuration
+    'enable_phi_hashing': 'Master switch for PHI (Protected Health Information) hashing. When enabled, PHI fields are hashed using SHA-256.',
+    'hash_on_import': 'When enabled, PHI fields are hashed during ETL import operations. Recommended for HIPAA compliance.',
+    'hash_on_export': 'When enabled, PHI fields are hashed in reports and exports. Provides additional protection layer.',
+    'phi_hash_salt_configured': 'Indicates whether a PHI hash salt has been configured. The salt is required for consistent hashing and must be set via environment variable.'
+};
+
+// Helper function to create info icon with tooltip
+function createInfoIcon(fieldName) {
+    const tooltip = configTooltips[fieldName] || 'No description available.';
+    // Escape HTML and quotes for tooltip
+    const escapedTooltip = tooltip.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return `<i class="fas fa-question-circle info-icon" 
+                data-bs-toggle="tooltip" 
+                data-bs-placement="top" 
+                data-bs-html="true"
+                title="${escapedTooltip}"></i>`;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSystemConfig();
+    
+        // Initialize Bootstrap tooltips after content is loaded
+    setTimeout(() => {
+        initializeTooltips();
+    }, 500);
+}
+
+// Function to initialize tooltips (called after rendering config)
+function initializeTooltips() {
+    // Destroy existing tooltips first
+    const existingTooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    existingTooltips.forEach(el => {
+        const tooltip = bootstrap.Tooltip.getInstance(el);
+        if (tooltip) {
+            tooltip.dispose();
+        }
+    });
+    
+    // Initialize new tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+            html: true,
+            placement: 'top',
+            trigger: 'hover'
+        });
+    });
+});
+
+async function loadSystemConfig() {
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/config/system');
+        if (!response.ok) {
+            throw new Error('Failed to load system configuration');
+        }
+        
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load system configuration');
+        }
+        
+        const config = data.config;
+        
+        // Render ETL Configuration
+        renderETLConfig(config.etl);
+        
+        // Render Web Configuration
+        renderWebConfig(config.web);
+        
+        // Render Logging Configuration
+        renderLoggingConfig(config.logging);
+        
+        // Render Directories Configuration
+        renderDirectoriesConfig(config.directories);
+        
+        // Render Security Configuration
+        renderSecurityConfig(config.security);
+        
+        // Initialize tooltips after all content is rendered
+        setTimeout(initializeTooltips, 100);
+        
+    } catch (error) {
+        console.error('Error loading system config:', error);
+        showError('systemConfigError', 'Failed to load system configuration: ' + error.message);
+    }
+}
+
+function renderETLConfig(etl) {
+    const content = document.getElementById('etlConfigContent');
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Batch Size ${createInfoIcon('batch_size')}
+                </label>
+                <div class="config-value">${etl.batch_size.toLocaleString()} records</div>
+                <small class="text-muted" style="font-size: 12px;">Number of records processed per batch</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Max Workers ${createInfoIcon('max_workers')}
+                </label>
+                <div class="config-value">${etl.max_workers}</div>
+                <small class="text-muted" style="font-size: 12px;">Maximum concurrent worker threads</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Timeout (seconds) ${createInfoIcon('timeout_seconds')}
+                </label>
+                <div class="config-value">${etl.timeout_seconds}</div>
+                <small class="text-muted" style="font-size: 12px;">Maximum time for ETL operations</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Retry Attempts ${createInfoIcon('retry_attempts')}
+                </label>
+                <div class="config-value">${etl.retry_attempts}</div>
+                <small class="text-muted" style="font-size: 12px;">Number of retry attempts on failure</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Skip Processed Files ${createInfoIcon('skip_processed_files')}
+                </label>
+                <div class="config-value">
+                    ${etl.skip_processed_files ? '<span class="badge bg-success">Enabled</span>' : '<span class="badge bg-secondary">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Automatically skip files that have already been processed</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Force Reprocess ${createInfoIcon('force_reprocess')}
+                </label>
+                <div class="config-value">
+                    ${etl.force_reprocess ? '<span class="badge bg-warning">Enabled</span>' : '<span class="badge bg-secondary">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Force reprocessing of all files regardless of previous processing</small>
+            </div>
+            <div class="col-md-12 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    File Patterns ${createInfoIcon('file_patterns')}
+                </label>
+                <div class="config-value">${etl.file_patterns.join(', ')}</div>
+                <small class="text-muted" style="font-size: 12px;">File patterns to discover during ETL</small>
+            </div>
+            <div class="col-md-12 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Ignored Filename Prefixes ${createInfoIcon('ignored_filename_prefixes')}
+                </label>
+                <div class="config-value">${etl.ignored_filename_prefixes.join(', ') || 'None'}</div>
+                <small class="text-muted" style="font-size: 12px;">Prefixes to ignore when extracting table names from filenames</small>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0" style="background: #ebf8ff; border-color: #bee3f8; color: #2c5282; font-size: 13px;">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> ETL configuration is managed via environment variables. 
+            Set <code>ETL_BATCH_SIZE</code>, <code>ETL_MAX_WORKERS</code>, etc. to override defaults.
+        </div>
+    `;
+}
+
+function renderWebConfig(web) {
+    const content = document.getElementById('webConfigContent');
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Host ${createInfoIcon('host')}
+                </label>
+                <div class="config-value">${web.host}</div>
+                <small class="text-muted" style="font-size: 12px;">Server host address</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Port ${createInfoIcon('port')}
+                </label>
+                <div class="config-value">${web.port}</div>
+                <small class="text-muted" style="font-size: 12px;">Server port number</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Reload Mode ${createInfoIcon('reload')}
+                </label>
+                <div class="config-value">
+                    ${web.reload ? '<span class="badge bg-warning">Enabled</span>' : '<span class="badge bg-secondary">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Auto-reload on code changes (development only)</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Log Level ${createInfoIcon('log_level')}
+                </label>
+                <div class="config-value">${web.log_level.toUpperCase()}</div>
+                <small class="text-muted" style="font-size: 12px;">Web server log verbosity</small>
+            </div>
+            <div class="col-md-12 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    CORS Origins ${createInfoIcon('cors_origins')}
+                </label>
+                <div class="config-value">${web.cors_origins.join(', ') || '*'}</div>
+                <small class="text-muted" style="font-size: 12px;">Allowed CORS origins</small>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0" style="background: #ebf8ff; border-color: #bee3f8; color: #2c5282; font-size: 13px;">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> Web server configuration is managed via environment variables or the launcher GUI.
+            Use <code>ETL_WEB_HOST</code> and <code>ETL_WEB_PORT</code> to override defaults.
+        </div>
+    `;
+}
+
+function renderLoggingConfig(logging) {
+    const content = document.getElementById('loggingConfigContent');
+    const fileSizeMB = (logging.file_rotation_size / (1024 * 1024)).toFixed(1);
+    
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Log Level ${createInfoIcon('level')}
+                </label>
+                <div class="config-value">
+                    <span class="badge bg-info">${logging.level}</span>
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Minimum log level to record</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Log Format ${createInfoIcon('format')}
+                </label>
+                <div class="config-value" style="font-size: 11px;">${logging.format}</div>
+                <small class="text-muted" style="font-size: 12px;">Log message format string</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    File Rotation Size ${createInfoIcon('file_rotation_size')}
+                </label>
+                <div class="config-value">${fileSizeMB} MB</div>
+                <small class="text-muted" style="font-size: 12px;">Maximum log file size before rotation</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    File Retention Count ${createInfoIcon('file_retention_count')}
+                </label>
+                <div class="config-value">${logging.file_retention_count} files</div>
+                <small class="text-muted" style="font-size: 12px;">Number of rotated log files to keep</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Console Logging ${createInfoIcon('enable_console')}
+                </label>
+                <div class="config-value">
+                    ${logging.enable_console ? '<span class="badge bg-success">Enabled</span>' : '<span class="badge bg-secondary">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Output logs to console/stdout</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    File Logging ${createInfoIcon('enable_file')}
+                </label>
+                <div class="config-value">
+                    ${logging.enable_file ? '<span class="badge bg-success">Enabled</span>' : '<span class="badge bg-secondary">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Write logs to files</small>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0" style="background: #ebf8ff; border-color: #bee3f8; color: #2c5282; font-size: 13px;">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> Application logging configuration is managed via environment variables.
+            Set <code>ETL_LOG_LEVEL</code> to change log verbosity. For SIEM logging, see the 
+            <a href="/settings/siem" style="color: #2c5282; text-decoration: underline;">Logging Configuration</a> page.
+        </div>
+    `;
+}
+
+function renderDirectoriesConfig(directories) {
+    const content = document.getElementById('directoriesConfigContent');
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Project Root ${createInfoIcon('project_root')}
+                </label>
+                <div class="config-value" style="font-size: 12px;">${directories.project_root}</div>
+                <small class="text-muted" style="font-size: 12px;">Application root directory</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Data Directory ${createInfoIcon('data_dir')}
+                </label>
+                <div class="config-value" style="font-size: 12px;">${directories.data_dir}</div>
+                <small class="text-muted" style="font-size: 12px;">Main data storage directory</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Input Directory ${createInfoIcon('input_dir')}
+                </label>
+                <div class="config-value" style="font-size: 12px;">${directories.input_dir}</div>
+                <small class="text-muted" style="font-size: 12px;">Directory for input files (UniteUs exports)</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Output Directory ${createInfoIcon('output_dir')}
+                </label>
+                <div class="config-value" style="font-size: 12px;">${directories.output_dir}</div>
+                <small class="text-muted" style="font-size: 12px;">Directory for generated reports and exports</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Logs Directory ${createInfoIcon('logs_dir')}
+                </label>
+                <div class="config-value" style="font-size: 12px;">${directories.logs_dir}</div>
+                <small class="text-muted" style="font-size: 12px;">Directory for application log files</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Database Directory ${createInfoIcon('database_dir')}
+                </label>
+                <div class="config-value" style="font-size: 12px;">${directories.database_dir}</div>
+                <small class="text-muted" style="font-size: 12px;">Directory for database files</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Backup Directory ${createInfoIcon('backup_dir')}
+                </label>
+                <div class="config-value" style="font-size: 12px;">${directories.backup_dir}</div>
+                <small class="text-muted" style="font-size: 12px;">Directory for database backups</small>
+            </div>
+        </div>
+        <div class="alert alert-info mt-3 mb-0" style="background: #ebf8ff; border-color: #bee3f8; color: #2c5282; font-size: 13px;">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> Directory paths are managed via environment variables.
+            Set <code>ETL_PROJECT_ROOT</code>, <code>ETL_DATA_DIR</code>, etc. to override defaults.
+        </div>
+    `;
+}
+
+function renderSecurityConfig(security) {
+    const content = document.getElementById('securityConfigContent');
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    PHI Hashing ${createInfoIcon('enable_phi_hashing')}
+                </label>
+                <div class="config-value">
+                    ${security.enable_phi_hashing ? '<span class="badge bg-success">Enabled</span>' : '<span class="badge bg-danger">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">One-way SHA-256 hashing of Protected Health Information</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Hash on Import ${createInfoIcon('hash_on_import')}
+                </label>
+                <div class="config-value">
+                    ${security.hash_on_import ? '<span class="badge bg-success">Enabled</span>' : '<span class="badge bg-secondary">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Hash PHI fields during ETL import</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    Hash on Export ${createInfoIcon('hash_on_export')}
+                </label>
+                <div class="config-value">
+                    ${security.hash_on_export ? '<span class="badge bg-success">Enabled</span>' : '<span class="badge bg-secondary">Disabled</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Hash PHI fields in reports and exports</small>
+            </div>
+            <div class="col-md-6 mb-3">
+                <label class="form-label" style="font-weight: 500; font-size: 13px; color: #4a5568;">
+                    PHI Hash Salt ${createInfoIcon('phi_hash_salt_configured')}
+                </label>
+                <div class="config-value">
+                    ${security.phi_hash_salt_configured ? '<span class="badge bg-success">Configured</span>' : '<span class="badge bg-warning">Not Configured</span>'}
+                </div>
+                <small class="text-muted" style="font-size: 12px;">Salt key for PHI hashing (stored securely)</small>
+            </div>
+        </div>
+        <div class="alert alert-warning mt-3 mb-0" style="background: #fffaf0; border-color: #fbd38d; color: #744210; font-size: 13px;">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Security Notice:</strong> PHI hashing configuration is critical for HIPAA compliance.
+            The hash salt is stored securely and never displayed. Changes to PHI hashing settings 
+            should be made carefully as they affect data processing.
+        </div>
+        <div class="alert alert-info mt-3 mb-0" style="background: #ebf8ff; border-color: #bee3f8; color: #2c5282; font-size: 13px;">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Note:</strong> Security configuration is managed via environment variables.
+            Set <code>PHI_HASH_SALT</code> to configure the hash salt.
+        </div>
+    `;
+}
+
+function showError(elementId, message) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>${message}
+            </div>
+        `;
+    }
+}
+</script>
+
+{% endblock %}

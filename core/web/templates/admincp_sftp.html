@@ -1,0 +1,701 @@
+<!--
+================================================================================
+Calaveras UniteUs ETL - Admin Control Panel SFTP Integration
+================================================================================
+Developed by Waqqas Hanafi
+Calaveras County Health and Human Services Agency
+
+Description:
+    Admin control panel page for managing SFTP integration settings,
+    authentication keys, and file download configuration.
+================================================================================
+-->
+{% extends "admincp_base.html" %}
+
+{% set active_page = 'sftp' %}
+{% set page_title = 'SFTP Integration' %}
+{% set page_icon = 'cloud-download-alt' %}
+{% set page_description = 'Configure secure file transfer for automated data downloads' %}
+
+{% block admin_content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card mb-4" id="sftpSettingsCard" style="border: 2px solid #cbd5e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: border-color 0.3s;">
+            <div class="card-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 20px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0" style="font-weight: 600; font-size: 16px; color: #2d3748;">
+                        <i class="fas fa-cog me-2" style="color: #2c5282;"></i>Connection Settings
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <label class="form-check-label me-2" for="enabled" style="font-weight: 500; font-size: 14px; color: #2d3748; margin: 0;">
+                            Enable SFTP
+                        </label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="enabled" name="enabled" style="cursor: pointer; width: 50px; height: 25px;" onchange="toggleSFTPEnabled()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" style="padding: 24px;">
+                <form id="sftpSettingsForm">
+
+                    <hr class="my-4">
+
+                    <!-- Server Connection -->
+                    <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Server Connection</h6>
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Host</label>
+                            <input type="text" class="form-control" id="host" name="host" 
+                                   placeholder="sftp.uniteus.io" required
+                                   style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            <small class="text-muted" style="font-size: 13px;">SFTP server hostname or IP address</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Port</label>
+                            <input type="number" class="form-control" id="port" name="port" 
+                                   value="22" required style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               placeholder="chhsca_data_prod" required
+                               autocomplete="off"
+                               style="border: 1px solid #cbd5e0; font-size: 14px;">
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Authentication -->
+                    <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Authentication Method</h6>
+                    <div class="mb-3">
+                        <select class="form-select" id="auth_method" name="auth_method" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            <option value="key">SSH Key (Recommended)</option>
+                            <option value="password">Password</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Private Key Path</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="private_key_path" name="private_key_path" 
+                                   value="keys/calco-uniteus-sftp" 
+                                   style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <small class="text-muted d-block" style="font-size: 13px;">
+                            Full path to SSH <strong>private</strong> key file (not the .pub file)
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Key Format</label>
+                        <select class="form-select" id="key_format" name="key_format" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                            <option value="auto">Auto-Detect (Recommended)</option>
+                            <option value="openssh">OpenSSH Format</option>
+                            <option value="pem">PEM/PKCS8 Format</option>
+                            <option value="ssh2">SSH2/RFC 4716 Format</option>
+                            <option value="putty">PuTTY Format (.ppk) - Requires Conversion</option>
+                        </select>
+                        <small class="text-muted d-block mt-1" style="font-size: 12px;">
+                            <i class="fas fa-info-circle"></i> Auto-detect tries all formats automatically
+                        </small>
+                    </div>
+
+                    <!-- PuTTY Conversion Panel -->
+                    <div class="alert alert-warning" id="putty_warning" style="display: none; font-size: 13px; padding: 16px;">
+                        <div class="d-flex align-items-start mb-2">
+                            <i class="fas fa-exclamation-triangle me-2 mt-1" style="color: #f59e0b;"></i>
+                            <div class="flex-grow-1">
+                                <strong>PuTTY Key Detected:</strong> This key needs to be converted to OpenSSH format.
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 mt-3">
+                            <button type="button" class="btn btn-primary btn-sm" id="convert_key_btn" style="background: #2c5282; border: none;">
+                                <i class="fas fa-sync-alt me-2"></i>Convert Key Now
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="show_conversion_help">
+                                <i class="fas fa-question-circle me-2"></i>Manual Instructions
+                            </button>
+                        </div>
+                        <div id="conversion_status" style="display: none; margin-top: 12px;"></div>
+                    </div>
+
+                    <!-- Passphrase (conditional) -->
+                    <div class="mb-3" id="passphrase_field">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Passphrase (if key is encrypted)</label>
+                        <input type="password" class="form-control" id="passphrase" name="passphrase" 
+                               autocomplete="new-password"
+                               style="border: 1px solid #cbd5e0; font-size: 14px;">
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Remote Paths -->
+                    <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Remote Settings</h6>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Remote Directory</label>
+                        <input type="text" class="form-control" id="remote_directory" name="remote_directory" 
+                               value="/data/exports" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">File Patterns</label>
+                        <input type="text" class="form-control" id="file_patterns" name="file_patterns" 
+                               value="*.txt,*.csv" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        <small class="text-muted" style="font-size: 13px;">Comma-separated list (e.g., *.txt,*.csv)</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Local Download Path</label>
+                        <input type="text" class="form-control" id="local_download_path" name="local_download_path" 
+                               value="temp_data_files" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Download Options -->
+                    <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Download Options</h6>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="auto_download" name="auto_download" checked>
+                            <label class="form-check-label" for="auto_download" style="cursor: pointer;">
+                                Auto-download before ETL runs
+                                <i class="fas fa-info-circle ms-2" style="color: #4299e1; cursor: help;" 
+                                   data-bs-toggle="tooltip" 
+                                   data-bs-placement="right"
+                                   title="When enabled, the system will automatically download new files from the SFTP server before running ETL jobs. This ensures you always process the latest data files without manual intervention."></i>
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 13px; padding-left: 24px;">
+                            Automatically download new files from SFTP server before ETL processing starts
+                        </small>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Security -->
+                    <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Security</h6>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="verify_host_key" name="verify_host_key" checked>
+                            <label class="form-check-label" for="verify_host_key">
+                                Verify Host Key
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1" style="font-size: 13px;">
+                            Verify server identity using known_hosts file (recommended)
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Known Hosts Path</label>
+                        <input type="text" class="form-control" id="known_hosts_path" name="known_hosts_path" 
+                               value="data/sftp/known_hosts" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        <small class="text-muted" style="font-size: 13px;">Path to SSH known_hosts file</small>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Advanced Settings -->
+                    <h6 class="mb-3" style="font-weight: 600; font-size: 14px; color: #2d3748;">Advanced Settings</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Timeout (seconds)</label>
+                            <input type="number" class="form-control" id="timeout_seconds" name="timeout_seconds" 
+                                   value="30" min="5" max="300" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="font-weight: 500; font-size: 14px; color: #2d3748;">Max Retries</label>
+                            <input type="number" class="form-control" id="max_retries" name="max_retries" 
+                                   value="3" min="0" max="10" style="border: 1px solid #cbd5e0; font-size: 14px;">
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons (hidden - using top/bottom save bars instead) -->
+                    <div class="d-flex gap-2 mt-4" style="display: none !important;">
+                        <button type="submit" class="btn btn-primary" style="background: #2c5282; border: none;">
+                            <i class="fas fa-save me-2"></i>Save Settings
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="testConnection">
+                            <i class="fas fa-plug me-2"></i>Test Connection
+                        </button>
+                    </div>
+                    <!-- Test Connection button (always visible) -->
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="button" class="btn btn-outline-primary" id="testConnectionVisible">
+                            <i class="fas fa-plug me-2"></i>Test Connection
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<script>
+// ============================================================================
+// Key File Verification
+// ============================================================================
+
+async function verifyKeyFile() {
+    const keyPathInput = document.getElementById('private_key_path');
+    const statusIcon = document.getElementById('keyFileStatus');
+    const messageDiv = document.getElementById('keyFileMessage');
+    
+    // Check if elements exist (they might not on all pages)
+    if (!keyPathInput || !statusIcon || !messageDiv) {
+        return;
+    }
+    
+    const keyPath = keyPathInput.value.trim();
+    
+    if (!keyPath) {
+        statusIcon.style.display = 'none';
+        messageDiv.innerHTML = '<span class="text-muted">Path to your OpenSSH private key (no .ppk extension)</span>';
+        return;
+    }
+    
+    // Show loading
+    statusIcon.style.display = 'flex';
+    statusIcon.style.borderColor = '#cbd5e0';
+    statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    try {
+        const response = await fetchWithRoleCheck('/api/admin/sftp/verify-key', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ key_path: keyPath })
+        });
+        
+        const data = await response.json();
+        
+        if (data.exists) {
+            // File exists - show success
+            statusIcon.style.borderColor = '#48bb78';
+            statusIcon.style.background = '#f0fff4';
+            statusIcon.innerHTML = '<i class="fas fa-check-circle text-success"></i>';
+            
+            let msg = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Key file found';
+            if (data.format) {
+                msg += ` (${data.format} format)`;
+            }
+            msg += '</span>';
+            messageDiv.innerHTML = msg;
+        } else {
+            // File not found - show error
+            statusIcon.style.borderColor = '#f56565';
+            statusIcon.style.background = '#fff5f5';
+            statusIcon.innerHTML = '<i class="fas fa-times-circle text-danger"></i>';
+            
+            let msg = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Key file not found</span>';
+            if (data.message) {
+                msg += '<br><small class="text-muted">' + data.message + '</small>';
+            }
+            messageDiv.innerHTML = msg;
+        }
+    } catch (error) {
+        console.error('Error verifying key file:', error);
+        statusIcon.style.display = 'none';
+        messageDiv.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Unable to verify file</span>';
+    }
+}
+
+// ============================================================================
+// Utility Functions for Notifications
+// ============================================================================
+
+function showSuccess(message) {
+    showNotification(message, 'success');
+}
+
+function showError(message) {
+    showNotification(message, 'danger');
+}
+
+function showInfo(message) {
+    showNotification(message, 'info');
+}
+
+function showWarning(message) {
+    showNotification(message, 'warning');
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show`;
+    notification.style.position = 'fixed';
+    notification.style.top = '20px';
+    notification.style.right = '20px';
+    notification.style.zIndex = '9999';
+    notification.style.minWidth = '300px';
+    notification.style.maxWidth = '500px';
+    notification.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+    
+    let icon = 'fa-info-circle';
+    if (type === 'success') icon = 'fa-check-circle';
+    if (type === 'danger') icon = 'fa-exclamation-circle';
+    if (type === 'warning') icon = 'fa-exclamation-triangle';
+    
+    notification.innerHTML = `
+        <i class="fas ${icon} me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 150);
+    }, 5000);
+}
+
+// ============================================================================
+// PuTTY Key Management Functions
+// ============================================================================
+
+function checkPuTTYKey() {
+    const keyPath = document.getElementById('private_key_path').value;
+    const keyFormat = document.getElementById('key_format').value;
+    const warning = document.getElementById('putty_warning');
+    
+    const isPPK = keyPath.toLowerCase().endsWith('.ppk');
+    
+    if (isPPK || keyFormat === 'putty') {
+        warning.style.display = 'block';
+    } else {
+        warning.style.display = 'none';
+    }
+}
+
+async function convertPuTTYKey() {
+    const keyPath = document.getElementById('private_key_path').value;
+    const passphrase = document.getElementById('passphrase').value;
+    const convertBtn = document.getElementById('convert_key_btn');
+    const statusDiv = document.getElementById('conversion_status');
+    
+    if (!keyPath) {
+        showError('Please enter a key path first');
+        return;
+    }
+    
+    if (!keyPath.toLowerCase().endsWith('.ppk')) {
+        showError('Selected file is not a PuTTY key (.ppk)');
+        return;
+    }
+    
+    convertBtn.disabled = true;
+    convertBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Converting...';
+    statusDiv.style.display = 'block';
+    statusDiv.className = 'alert alert-info';
+    statusDiv.innerHTML = '<i class="fas fa-circle-notch fa-spin me-2"></i>Converting key, please wait...';
+    
+    try {
+        const formData = new FormData();
+        formData.append('ppk_path', keyPath);
+        if (passphrase) {
+            formData.append('passphrase', passphrase);
+        }
+        
+        const response = await fetch('/api/sftp/convert-key', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Handle both property names for compatibility
+            const convertedPath = data.converted_path || data.new_key_path || data.output_path;
+            
+            statusDiv.className = 'alert alert-success';
+            statusDiv.innerHTML = `
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Conversion Successful!</strong><br>
+                <small>Converted key saved to: ${convertedPath}</small>
+            `;
+            
+            // Update the path field
+            if (convertedPath) {
+                document.getElementById('private_key_path').value = convertedPath;
+                
+                // Trigger verification of the new key
+                if (typeof verifyKeyFile === 'function') {
+                    verifyKeyFile();
+                }
+            }
+            
+            document.getElementById('putty_warning').style.display = 'none';
+            
+            showSuccess('Key converted successfully! Path updated. Click "Save Settings" to save changes.');
+            
+            convertBtn.innerHTML = '<i class="fas fa-check me-2"></i>Converted';
+            setTimeout(() => {
+                convertBtn.disabled = false;
+                convertBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Convert Key Now';
+            }, 3000);
+        } else {
+            statusDiv.className = 'alert alert-danger';
+            statusDiv.innerHTML = `
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong>Conversion Failed:</strong><br>
+                <small>${data.message}</small>
+            `;
+            
+            showError('Conversion failed: ' + data.message);
+            convertBtn.disabled = false;
+            convertBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Convert Key Now';
+        }
+    } catch (error) {
+        console.error('Error converting key:', error);
+        statusDiv.className = 'alert alert-danger';
+        statusDiv.innerHTML = `<i class="fas fa-exclamation-circle me-2"></i><strong>Error:</strong> ${error.message}`;
+        showError('Failed to convert key: ' + error.message);
+        convertBtn.disabled = false;
+        convertBtn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Convert Key Now';
+    }
+}
+
+document.getElementById('show_conversion_help')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    const instructions = `
+╔══════════════════════════════════════════════════════════════╗
+║         PuTTY Key Conversion Instructions                    ║
+╚══════════════════════════════════════════════════════════════╝
+
+Your key is in PuTTY format (.ppk), which needs conversion to OpenSSH format.
+
+OPTION 1: Using PuTTYgen (GUI - Easiest)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ If you have calco-uniteus-sftp.ppk (PuTTY format):
+
+1. Open PuTTYgen (comes with PuTTY)
+2. Click "Load" and select: keys\\calco-uniteus-sftp.ppk
+3. Enter passphrase if prompted
+4. Go to: Conversions → Export OpenSSH key
+5. Save as: keys\\calco-uniteus-sftp (no .ppk extension)
+6. The path above is already set correctly to: keys\\calco-uniteus-sftp
+7. Click "Save Settings" and then "Test Connection"
+
+OPTION 2: Using Command Line
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If you have the .ppk file, convert it:
+puttygen keys\\calco-uniteus-sftp.ppk -O private-openssh -o keys\\calco-uniteus-sftp
+
+Or if you already have OpenSSH format, just place the key at:
+keys\\calco-uniteus-sftp
+
+DOWNLOAD PuTTY:
+https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html
+
+After conversion, update the Private Key Path to point to the converted file.
+`;
+    alert(instructions);
+});
+
+// Load current settings
+async function loadSettings() {
+    try {
+        const response = await fetchWithRoleCheck('/api/settings/sftp');
+        const data = await response.json();
+        
+        if (data.success && data.settings) {
+            const s = data.settings;
+            document.getElementById('enabled').checked = Boolean(s.enabled);
+            document.getElementById('host').value = s.host || 'sftp.uniteus.io';
+            document.getElementById('port').value = s.port || 22;
+            document.getElementById('username').value = s.username || 'chhsca_data_prod';
+            document.getElementById('auth_method').value = s.auth_method || 'key';
+            document.getElementById('private_key_path').value = s.private_key_path || 'keys/calco-uniteus-sftp';
+            document.getElementById('key_format').value = s.key_format || 'auto';
+            
+            // Verify key file exists on load
+            setTimeout(() => verifyKeyFile(), 500);
+            document.getElementById('remote_directory').value = s.remote_directory || '/data/exports';
+            document.getElementById('file_patterns').value = (s.file_patterns || ['*.txt', '*.csv']).join(',');
+            document.getElementById('local_download_path').value = s.local_download_path || 'temp_data_files';
+            document.getElementById('auto_download').checked = s.auto_download !== undefined ? Boolean(s.auto_download) : true; // Default to true
+            document.getElementById('timeout_seconds').value = s.timeout_seconds || 30;
+            document.getElementById('max_retries').value = s.max_retries || 3;
+            document.getElementById('verify_host_key').checked = Boolean(s.verify_host_key !== 0);
+            document.getElementById('known_hosts_path').value = s.known_hosts_path || 'data/sftp/known_hosts';
+            
+            checkPuTTYKey();
+        }
+    } catch (error) {
+        console.error('Error loading settings:', error);
+        showError('Failed to load SFTP settings');
+    }
+}
+
+// Add listeners
+document.getElementById('private_key_path').addEventListener('input', checkPuTTYKey);
+document.getElementById('key_format').addEventListener('change', checkPuTTYKey);
+document.getElementById('convert_key_btn').addEventListener('click', convertPuTTYKey);
+
+// Save settings
+document.getElementById('sftpSettingsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    formData.set('enabled', document.getElementById('enabled').checked ? 'true' : 'false');
+    formData.set('auto_download', document.getElementById('auto_download').checked ? 'true' : 'false');
+    formData.set('delete_after_download', 'false'); // Always false - option removed
+    formData.set('verify_host_key', document.getElementById('verify_host_key').checked ? 'true' : 'false');
+    
+    try {
+        const response = await fetch('/api/settings/sftp', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess('SFTP settings saved successfully!');
+            // Mark form as saved
+            if (typeof formChangeTracker !== 'undefined') {
+                formChangeTracker.markSaved('sftpSettingsForm');
+            }
+            // Refresh nav pill
+            if (typeof window.refreshNavPill === 'function') {
+                window.refreshNavPill('sftp');
+            }
+            updateSFTPCardStyle();
+        } else {
+            showError('Failed to save settings: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        showError('Failed to save SFTP settings');
+    }
+});
+
+// Test connection handler (used by both buttons)
+const testConnectionHandler = async () => {
+    try {
+        showInfo('Testing connection...');
+        
+        const response = await fetch('/api/sftp/test-connection', {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message);
+        } else {
+            showError(data.message || 'Connection test failed');
+        }
+    } catch (error) {
+        console.error('Error testing connection:', error);
+        showError('Failed to test connection');
+    }
+};
+
+// Test connection handlers
+document.getElementById('testConnection')?.addEventListener('click', testConnectionHandler);
+document.getElementById('testConnectionVisible')?.addEventListener('click', testConnectionHandler);
+
+
+// Update card style based on enabled state
+async function toggleSFTPEnabled() {
+    const enabled = document.getElementById('enabled').checked;
+    
+    // Update card style immediately
+    updateSFTPCardStyle();
+    
+    // Save the enabled state to backend
+    try {
+        const formData = new FormData();
+        formData.append('enabled', enabled);
+        formData.append('auto_download', document.getElementById('auto_download')?.checked ? 'true' : 'false');
+        formData.append('delete_after_download', 'false');
+        formData.append('verify_host_key', document.getElementById('verify_host_key')?.checked ? 'true' : 'false');
+        formData.append('host', document.getElementById('host')?.value || '');
+        formData.append('port', document.getElementById('port')?.value || '22');
+        formData.append('username', document.getElementById('username')?.value || '');
+        formData.append('private_key_path', document.getElementById('private_key_path')?.value || '');
+        
+        const response = await fetch('/api/settings/sftp', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(`SFTP ${enabled ? 'enabled' : 'disabled'} successfully!`);
+            // Refresh nav pill
+            if (typeof window.refreshNavPill === 'function') {
+                window.refreshNavPill('sftp');
+            }
+        } else {
+            showError('Failed to save SFTP settings: ' + (data.error || 'Unknown error'));
+            // Revert checkbox on error
+            document.getElementById('enabled').checked = !enabled;
+            updateSFTPCardStyle();
+        }
+    } catch (error) {
+        console.error('Error toggling SFTP:', error);
+        showError('Error updating SFTP: ' + error.message);
+        // Revert checkbox on failure
+        document.getElementById('enabled').checked = !enabled;
+        updateSFTPCardStyle();
+    }
+}
+
+function updateSFTPCardStyle() {
+    const card = document.getElementById('sftpSettingsCard');
+    const enabledCheckbox = document.getElementById('enabled');
+    if (card && enabledCheckbox) {
+        const enabled = enabledCheckbox.checked;
+        if (enabled) {
+            card.style.borderColor = '#48bb78';
+            card.style.borderWidth = '2px';
+        } else {
+            card.style.borderColor = '#cbd5e0';
+            card.style.borderWidth = '2px';
+        }
+    }
+}
+
+// Initialize Bootstrap tooltips
+function initTooltips() {
+    // Initialize Bootstrap tooltips if available
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    }
+}
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadSettings();
+    // Update card style after loading settings
+    setTimeout(updateSFTPCardStyle, 100);
+    
+    // Initialize tooltips
+    setTimeout(initTooltips, 200);
+    
+    // Initialize form change tracking (after settings load)
+    setTimeout(() => {
+        if (typeof formChangeTracker !== 'undefined') {
+            formChangeTracker.init('sftpSettingsForm', async function() {
+                // Custom save callback
+                document.getElementById('sftpSettingsForm').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+            }, 1000);
+        }
+    }, 500);
+});
+</script>
+
+{% endblock %}
+
